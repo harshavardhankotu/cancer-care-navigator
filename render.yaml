@@ -1,0 +1,14 @@
+# Render.com free-tier blueprint ($0/month; cold starts after 15 min idle are normal)
+services:
+  - type: web
+    name: cancer-care-navigator
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: STORAGE_DIR
+        value: /tmp/storage
+      - key: DATABASE_URL
+        sync: false   # paste a free Neon Postgres URL in the dashboard (https://neon.tech)
