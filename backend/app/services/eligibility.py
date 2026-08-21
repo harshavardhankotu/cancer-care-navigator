@@ -87,10 +87,15 @@ def case_hospitals(db: Session, case: Case) -> list[str]:
 
 
 def network_matches(db: Session, case: Case) -> list[dict]:
-    """Flag which schemes' network hospital lists overlap this case's hospitals."""
+    """Flag which schemes' network hospital lists overlap this case's hospitals.
+    Scoped to the case's country so a GB patient isn't matched against PM-JAY."""
     hospitals = case_hospitals(db, case)
+    schemes = db.query(CoverageScheme).all()
+    ctry = (case.country or "").upper()
+    if ctry:
+        schemes = [s for s in schemes if (s.country or "").upper() == ctry]
     results = []
-    for scheme in db.query(CoverageScheme).all():
+    for scheme in schemes:
         network = [n.lower() for n in (scheme.network_hospitals or [])]
         hits = [h for h in hospitals if any(h.lower() in n or n in h.lower() for n in network)]
         if hits:
@@ -101,7 +106,11 @@ def network_matches(db: Session, case: Case) -> list[dict]:
 def run_case_match(db: Session, case: Case) -> dict:
     prof_row = db.query(CaseFinancialProfile).filter(CaseFinancialProfile.case_id == case.id).first()
     profile = {f: getattr(prof_row, f) for f in PROFILE_FIELDS} if prof_row else {}
-    results = [evaluate_scheme(s, profile) for s in db.query(CoverageScheme).all()]
+    schemes = db.query(CoverageScheme).all()
+    ctry = (case.country or "").upper()
+    if ctry:
+        schemes = [s for s in schemes if (s.country or "").upper() == ctry]
+    results = [evaluate_scheme(s, profile) for s in schemes]
     eligible = [r for r in results if r["status"] == "eligible"]
     gaps = []
     insurance_status = (profile.get("insurance_status") or "").lower()

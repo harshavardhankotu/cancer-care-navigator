@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_family
 from ..database import get_db
 from ..models import (Case, CaseFinancialProfile, CasePackage, DecisionFlag,
-                      Document, Family, OpinionRequest, TransferRequest)
+                      Document, Family, OpinionRequest, TransferRequest,
+                      WaitTimeReport)
 from ..services.storage import delete_file
 
 router = APIRouter(prefix="/api/me", tags=["dpdp-rights"])
@@ -84,6 +85,8 @@ def erase_me(db: Session = Depends(get_db), family=Depends(get_current_family)):
         db.query(TransferRequest).filter(TransferRequest.case_id == case.id).delete()
         db.query(CaseFinancialProfile).filter(CaseFinancialProfile.case_id == case.id).delete()
         db.delete(case)
+    # Crowdsourced wait-time reports are personal contributions too — erase them.
+    db.query(WaitTimeReport).filter(WaitTimeReport.reported_by_family_id == family.id).delete()
     db.delete(family)
     db.commit()
     return {"deleted": True,

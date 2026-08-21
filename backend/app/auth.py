@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -9,6 +10,24 @@ from sqlalchemy.orm import Session
 from .config import SECRET_KEY, TOKEN_ALGORITHM, TOKEN_EXPIRE_HOURS
 from .database import get_db
 from .models import Case, Family
+
+# ---- Simple in-memory brute-force limiter ----
+# Fine for a single process. Swap for Redis-backed counting when running
+# multiple workers/replicas (documented in README).
+_attempts: dict[str, deque] = defaultdict(deque)
+
+
+def is_rate_limited(key: str, max_attempts: int, window_seconds: int) -> bool:
+    """Records an attempt and returns True when over the limit."""
+    now = datetime.now(timezone.utc)
+    q = _attempts[key]
+    cutoff = now - timedelta(seconds=window_seconds)
+    while q and q[0] < cutoff:
+        q.popleft()
+    if len(q) >= max_attempts:
+        return True
+    q.append(now)
+    return False
 
 
 def hash_password(password: str) -> str:

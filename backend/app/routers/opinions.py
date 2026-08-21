@@ -98,6 +98,10 @@ def update_opinion(opinion_id: int, body: OpinionAction, db: Session = Depends(g
     elif body.action == "no_response":
         req.status = "no_response"
     elif body.action == "respond":
+        if req.status not in ("sent", "acknowledged", "no_response"):
+            raise HTTPException(
+                status_code=400,
+                detail="Record a response only after the request has been sent.")
         resp = body.response or OpinionRespond()
         req.status = "opinion_received"
         req.responded_at = datetime.utcnow()
@@ -217,6 +221,20 @@ def create_share_link(pkg_id: int, db: Session = Depends(get_db),
     return {"share_path": f"/package/{pkg.id}/{pkg.share_token}",
             "note": "Anyone with this link can read this snapshot only. Revoke by "
                     "generating a fresh package version and not sharing the old link."}
+
+
+@router.post("/packages/{pkg_id}/share-revoke")
+def revoke_share_link(pkg_id: int, db: Session = Depends(get_db),
+                      family: Family = Depends(get_current_family)):
+    """Instantly kills a shared link: any old URL stops working (404)."""
+    pkg = db.get(CasePackage, pkg_id)
+    if not pkg:
+        raise HTTPException(status_code=404, detail="Package not found")
+    owned_case(db, family, pkg.case_id)
+    pkg.share_token = None
+    db.commit()
+    return {"revoked": True,
+            "note": "The previous link no longer works. Create a new one anytime."}
 
 
 # ---- public, unauthenticated share endpoints (token-guarded) ----

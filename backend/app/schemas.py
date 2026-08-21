@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class FamilyCreate(BaseModel):
@@ -155,7 +155,7 @@ class CenterOut(BaseModel):
 
 class WaitReportIn(BaseModel):
     center_name: str
-    reported_wait_days: int
+    reported_wait_days: int = Field(ge=0, le=400)
 
 
 class TransferIn(BaseModel):
@@ -195,7 +195,7 @@ class FinProfileIn(BaseModel):
     income_bracket: Literal[
         "low", "lower_middle", "middle", "upper_middle", "high", "unknown"
     ] | None = None
-    budget_ceiling: float | None = None
+    budget_ceiling: float | None = Field(default=None, ge=0)
 
 
 class FinProfileOut(FinProfileIn):

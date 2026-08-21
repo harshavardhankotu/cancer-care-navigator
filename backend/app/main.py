@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from .config import BASE_DIR, DISCLAIMER, DATABASE_URL
+from .config import ALLOWED_ORIGINS, BASE_DIR, DISCLAIMER, DATABASE_URL, USING_DEFAULT_SECRET
 from .database import Base, SessionLocal, engine
 from .routers import (auth_routes, cases, directory, documents, finance,
                       me, opinions, plan, trials)
@@ -49,9 +49,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Cancer Care Navigator API", version="0.2.0",
               description=DISCLAIMER, lifespan=lifespan)
 
+if USING_DEFAULT_SECRET:
+    import logging
+    logging.getLogger("uvicorn.error").warning(
+        "SECRET_KEY is not set — using development default. Set SECRET_KEY before real deployment.")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,6 +71,18 @@ for router in (auth_routes.router, cases.router, documents.router,
 @app.get("/api/health")
 def health():
     return {"status": "ok", "disclaimer": DISCLAIMER}
+
+
+from .legal_notes import REGION_LEGAL_NOTES, notes_for_country
+
+
+@app.get("/api/legal/region-notes")
+def legal_region_notes(country: str | None = None):
+    """Per-country privacy-law summaries shown on the Privacy page."""
+    if country:
+        return notes_for_country(country)
+    return {code: {"law": v["law"], "regulator": v["regulator"]}
+            for code, v in REGION_LEGAL_NOTES.items()}
 
 
 # ---- Single-process production serving ($0 hosting friendly) ----

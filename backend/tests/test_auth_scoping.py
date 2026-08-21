@@ -21,16 +21,16 @@ def client():
 
 @pytest.fixture(scope="module")
 def tokens(client):
-    ta = client.post("/api/auth/register", json={"email": "a@t.com", "password": "secret1",
+    ta = client.post("/api/auth/register", json={"email": "a@t.com", "password": "secretpass1",
                                                  "consent_accepted": True}).json()["token"]
-    tb = client.post("/api/auth/register", json={"email": "b@t.com", "password": "secret2",
+    tb = client.post("/api/auth/register", json={"email": "b@t.com", "password": "secretpass2",
                                                  "consent_accepted": True}).json()["token"]
     return ta, tb
 
 
 def test_consent_required(client):
     assert client.post("/api/auth/register",
-                       json={"email": "c@t.com", "password": "secret3"}).status_code == 400
+                       json={"email": "c@t.com", "password": "secretpass3"}).status_code == 400
 
 
 def _auth(t):

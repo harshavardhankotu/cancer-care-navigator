@@ -36,10 +36,16 @@ with client:
     print("== auth & scoping ==")
     check("register WITHOUT consent rejected (DPDP)",
           client.post("/api/auth/register",
-                      json={"email": "no-consent@test.com", "password": "secret1"}).status_code == 400)
-    tok_a = client.post("/api/auth/register", json={"email": "fam-a@test.com", "password": "secret1",
+                      json={"email": "no-consent@test.com", "password": "secretpass1"}).status_code == 400)
+    check("weak password rejected (too short)",
+          client.post("/api/auth/register",
+                      json={"email": "weak1@test.com", "password": "short1", "consent_accepted": True}).status_code == 400)
+    check("common password rejected",
+          client.post("/api/auth/register",
+                      json={"email": "weak2@test.com", "password": "1234567890", "consent_accepted": True}).status_code == 400)
+    tok_a = client.post("/api/auth/register", json={"email": "fam-a@test.com", "password": "secretpass1",
                                                     "consent_accepted": True}).json()["token"]
-    tok_b = client.post("/api/auth/register", json={"email": "fam-b@test.com", "password": "secret2",
+    tok_b = client.post("/api/auth/register", json={"email": "fam-b@test.com", "password": "secretpass2",
                                                     "consent_accepted": True}).json()["token"]
     check("register two families", bool(tok_a) and bool(tok_b))
     check("no token -> 401", client.get("/api/cases").status_code == 401)
@@ -69,6 +75,36 @@ with client:
           client.get(f"/api/documents/{doc['id']}/file", headers=auth(tok_b)).status_code == 404)
     docs = client.get(f"/api/cases/{cid}/documents", headers=auth(tok_a)).json()
     check("document listed", len(docs) == 1)
+
+    # Digital PDFs must be READ (pdf_text mode), proving the free extraction pipeline.
+    from reportlab.pdfgen import canvas as _rl_canvas
+    from io import BytesIO as _B
+    buf = _B()
+    c = _rl_canvas.Canvas(buf)
+    c.drawString(72, 780, "PATHOLOGY REPORT")
+    c.drawString(72, 762, "City Care Hospital, Oncology Lab")
+    c.drawString(72, 744, "Date: 2026-03-15")
+    c.drawString(72, 726, "Finding: adenocarcinoma; biomarker panel pending")
+    c.save()
+    digital = buf.getvalue()
+    r2 = client.post(f"/api/cases/{cid}/documents", headers=auth(tok_a),
+                     files={"file": ("biopsy-pathology.pdf", _B(digital), "application/pdf")})
+    d2 = r2.json()
+    check("digital PDF auto-read via pypdf (pdf_text mode)",
+          d2["raw_extraction_json"]["extraction_mode"] == "pdf_text"
+          and "Pathology" in (d2["extracted_doc_type"] or ""))
+    check("date extracted from PDF text", d2["extracted_date"] is not None)
+
+    # Oversized uploads must be rejected without reading everything into memory.
+    from app.services import storage as storage_mod
+    old_cap = storage_mod.MAX_UPLOAD_BYTES
+    try:
+        storage_mod.MAX_UPLOAD_BYTES = 64
+        big = client.post(f"/api/cases/{cid}/documents", headers=auth(tok_a),
+                          files={"file": ("big.pdf", _B(b"x" * 100), "application/pdf")})
+        check("oversized upload rejected (413)", big.status_code == 413)
+    finally:
+        storage_mod.MAX_UPLOAD_BYTES = old_cap
 
     print("== feature 2: foreclosure flags ==")
     flags = client.get(f"/api/cases/{cid}/flags", headers=auth(tok_a)).json()
@@ -185,6 +221,9 @@ with client:
           pub_pkg.status_code == 200 and pub_pkg.json()["snapshot_json"]["case"]["patient_name"] == "Test Patient")
     bad = client.get(f"/api/public/packages/{p1['id']}/wrong-token")
     check("wrong share token rejected", bad.status_code == 404)
+    client.post(f"/api/packages/{p1['id']}/share-revoke", headers=auth(tok_a))
+    revoked = client.get(f"/api/public/packages/{p1['id']}/{share['share_path'].split('/')[-1]}")
+    check("revoked share link stops working", revoked.status_code == 404)
     demo_login = client.post("/api/auth/login", json={"email": "demo@navigator.app", "password": "demo1234"})
     check("demo account seeded & login works", demo_login.status_code == 200)
     demo_tok = demo_login.json()["token"]
@@ -262,6 +301,26 @@ with client:
     check("supporter tier unlocks extended lists",
           sup_plan["plan_tier"] == "supporter"
           and len(sup_plan["global_centres"]) >= len(free_plan["global_centres"]))
+
+    print("== legal: region-aware privacy notes ==")
+    de = client.get("/api/legal/region-notes", params={"country": "DE"}).json()
+    check("EU note served for Germany", "GDPR" in de["law"])
+    usn = client.get("/api/legal/region-notes", params={"country": "US"}).json()
+    check("US note covers state laws (WA My Health My Data)", "My Health My Data" in str(usn))
+    allr = client.get("/api/legal/region-notes").json()
+    check("region notes cover 15+ jurisdictions", len(allr) >= 15)
+
+    print("== security: brute-force lockout ==")
+    codes = []
+    for _ in range(11):
+        rr = client.post("/api/auth/login",
+                         json={"email": "fam-a@test.com", "password": "wrongpass99"})
+        codes.append(rr.status_code)
+    check("brute force rate-limited (429 after burst)", 429 in codes)
+    # wait — fam-a is still valid; ensure legit login still works from same IP+email? It is
+    # rate-limited by design for this window; use a different account to confirm service.
+    ok = client.post("/api/auth/login", json={"email": "demo@navigator.app", "password": "demo1234"})
+    check("other accounts unaffected by lockout", ok.status_code == 200)
     case_gb = client.post("/api/cases", headers=auth(tok_a), json={
         "patient_name": "GB Patient", "cancer_type": "breast", "country": "GB"}).json()
     client.put(f"/api/cases/{case_gb['id']}/financial-profile", headers=auth(tok_a),
@@ -277,6 +336,12 @@ with client:
     check("DPDP right to erasure: account deleted", deleted["deleted"] is True)
     check("deleted family cannot login",
           client.post("/api/auth/login", json={"email": "fam-b@test.com",
-                                               "password": "secret2"}).status_code == 401)
+                                               "password": "secretpass2"}).status_code == 401)
+
+    print("== erasure completeness (wait reports) ==")
+    client.delete("/api/me", headers=auth(tok_a))
+    summary_after = client.get("/api/centers/wait-summary").json()
+    tata_left = [s for s in summary_after if "Tata" in s["center_name"]]
+    check("user's crowdsourced reports erased with account", len(tata_left) == 0)
 
 print(f"\nALL {PASS} SMOKE CHECKS PASSED")

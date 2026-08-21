@@ -1,16 +1,49 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { api } from '../api.js'
 import { DISCLAIMER } from '../components/Layout.jsx'
 
 export default function Privacy() {
+  const [region, setRegion] = useState('IN')
+  const [regionNote, setRegionNote] = useState(null)
+  const [regimes, setRegimes] = useState(null)
+
+  useEffect(() => {
+    api('/legal/region-notes').then(setRegimes).catch(() => {})
+  }, [])
+  useEffect(() => {
+    api(`/legal/region-notes?country=${region}`).then(setRegionNote).catch(() => {})
+  }, [region])
+
   return (
     <div className="max-w-3xl">
-      <h1 className="text-xl font-bold mb-1">Privacy notice (Digital Personal Data Protection Act, 2023)</h1>
-      <p className="text-xs text-slate-500 mb-4">
-        Plain-language, itemised notice as required by the DPDP Act 2023 and DPDP Rules 2025.
+      <h1 className="text-xl font-bold mb-1">Privacy notice</h1>
+      <p className="text-xs text-slate-500 mb-3">
+        Plain-language notice in line with the Digital Personal Data Protection Act, 2023 (India),
+        GDPR-grade principles worldwide.
         <span className="ml-2 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 text-amber-800 font-semibold">
-          TEMPLATE — have a lawyer review before real patient use
+          TEMPLATE — lawyer review required before real patient use
         </span>
       </p>
+
+      <div className="card mb-3 border-l-4 border-l-blue-500">
+        <label className="label">Laws where YOU are (select your country)</label>
+        <select className="input max-w-xs mb-2" value={region} onChange={(e) => setRegion(e.target.value)}>
+          {(regimes ? Object.keys(regimes) : ['IN']).map((code) => (
+            <option key={code} value={code}>{code === 'EU' ? 'European Union' : code}</option>
+          ))}
+          {!regimes && <option value="IN">IN</option>}
+          {!regimes && <option value="US">US</option>}
+        </select>
+        {regionNote && (
+          <>
+            <p className="text-sm font-semibold text-blue-800">{regionNote.law}</p>
+            <ul className="list-disc ml-5 text-xs text-slate-600 mt-1 space-y-0.5">
+              {regionNote.points.map((p, i) => <li key={i}>{p}</li>)}
+            </ul>
+            <p className="text-[11px] text-slate-400 mt-1">Complaints: {regionNote.regulator}. This summary is general information, not legal advice.</p>
+          </>
+        )}
+      </div>
 
       <div className="card mb-3">
         <h2 className="font-semibold mb-1">What we collect — and exactly why</h2>

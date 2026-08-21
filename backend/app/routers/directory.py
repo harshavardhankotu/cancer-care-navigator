@@ -43,9 +43,11 @@ def _is_public_nonprofit(detail: str) -> bool:
 
 def _designation_points(detail: str) -> int:
     """Tiered by how selective the programme is: NCI 'Comprehensive' is +4,
-    other national/designation programmes +3."""
+    other national/designation programmes +3. Requires BOTH markers so e.g.
+    DKG-certified CCCs (also called 'comprehensive') stay in the +3 tier."""
+    d = detail.lower()
     full = SCORE_WEIGHTS["institutional_designation"]
-    return full if "comprehensive" in detail.lower() else full - 1
+    return full if ("nci" in d and "comprehensive" in d) else full - 1
 
 
 def _score_center(center: SpecialistCenter, notes: list[HospitalNote]) -> dict:

@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from ..models import Document, Family
 from ..schemas import DocumentOut, DocumentPatch
 from ..services.extraction import extract_document
 from ..services.rules_engine import evaluate_case
+from ..services import storage
 from ..services.storage import absolute_path, delete_file, save_file
 
 router = APIRouter(prefix="/api", tags=["documents"])
@@ -58,13 +59,28 @@ def add_manual_record(case_id: int, body: ManualRecord, db: Session = Depends(ge
 
 
 @router.post("/cases/{case_id}/documents", response_model=DocumentOut)
-def upload_document(case_id: int, file: UploadFile = File(...),
+def upload_document(case_id: int, request: Request, file: UploadFile = File(...),
                     extracted_date: str | None = Form(None),
                     extracted_source: str | None = Form(None),
                     extracted_doc_type: str | None = Form(None),
                     db: Session = Depends(get_db), family: Family = Depends(get_current_family)):
     case = owned_case(db, family, case_id)
-    content = file.file.read()
+
+    # Reject oversized uploads BEFORE buffering them into memory.
+    clen = request.headers.get("content-length")
+    if clen and clen.isdigit() and int(clen) > storage.MAX_UPLOAD_BYTES + 64 * 1024:
+        raise HTTPException(status_code=413, detail="File exceeds 25 MB limit.")
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = file.file.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > storage.MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="File exceeds 25 MB limit.")
+        chunks.append(chunk)
+    content = b"".join(chunks)
     try:
         rel_path = save_file(family.id, case.id, file.filename or "upload", content)
     except ValueError as e:
