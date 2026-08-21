@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class FamilyCreate(BaseModel):
     email: str
     password: str
+    consent_accepted: bool = False  # DPDP Act 2023 — must be explicitly accepted
 
 
 class TokenOut(BaseModel):

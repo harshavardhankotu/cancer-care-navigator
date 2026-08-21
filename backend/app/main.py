@@ -10,7 +10,7 @@ from sqlalchemy import text
 from .config import BASE_DIR, DISCLAIMER, DATABASE_URL
 from .database import Base, SessionLocal, engine
 from .routers import (auth_routes, cases, directory, documents, finance,
-                      opinions, trials)
+                      me, opinions, trials)
 from .seed import seed_if_empty
 
 FRONTEND_DIST = os.path.normpath(os.path.join(BASE_DIR, "..", "frontend", "dist"))
@@ -21,9 +21,14 @@ def _ensure_columns() -> None:
     if not DATABASE_URL.startswith("sqlite"):
         return
     with engine.begin() as conn:
-        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(case_packages)"))}
-        if "share_token" not in cols:
+        pkg_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(case_packages)"))}
+        if "share_token" not in pkg_cols:
             conn.execute(text("ALTER TABLE case_packages ADD COLUMN share_token VARCHAR(64)"))
+        fam_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(families)"))}
+        if "consent_accepted" not in fam_cols:
+            conn.execute(text("ALTER TABLE families ADD COLUMN consent_accepted BOOLEAN DEFAULT 0"))
+        if "consent_at" not in fam_cols:
+            conn.execute(text("ALTER TABLE families ADD COLUMN consent_at DATETIME"))
 
 
 @asynccontextmanager
@@ -48,7 +53,7 @@ app.add_middleware(
 
 for router in (auth_routes.router, cases.router, documents.router,
                opinions.router, opinions.public_router, directory.router,
-               trials.router, finance.router):
+               trials.router, finance.router, me.router):
     app.include_router(router)
 
 

@@ -12,6 +12,8 @@ class Family(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
+    consent_accepted: Mapped[bool] = mapped_column(Boolean, default=False)  # DPDP Act 2023
+    consent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     cases = relationship("Case", back_populates="family")
@@ -135,6 +137,27 @@ class SpecialistCenter(Base):
     cancer_types: Mapped[list | None] = mapped_column(JSON, nullable=True)
     verified_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_verified_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+
+    notes = relationship("HospitalNote", back_populates="center")
+
+
+class HospitalNote(Base):
+    """Objective, citable public facts about a hospital — never subjective reviews.
+
+    note_type: ownership | accreditation | scheme_empanelment |
+               regulatory_action | consumer_cases
+    Every row MUST carry a source the user can verify independently.
+    """
+    __tablename__ = "hospital_notes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    center_id: Mapped[int] = mapped_column(ForeignKey("specialist_centers.id"), index=True)
+    note_type: Mapped[str] = mapped_column(String(50), index=True)
+    detail: Mapped[str] = mapped_column(Text)
+    source_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    as_of_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+
+    center = relationship("SpecialistCenter", back_populates="notes")
 
 
 class WaitTimeReport(Base):

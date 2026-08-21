@@ -96,6 +96,35 @@ python -m pytest tests -q     # authorization-scoping tests
 | — | Placeholder/unverified data badged amber everywhere | ✅ working |
 | — | Single-process deploy (API + app in one uvicorn), SPA deep-link fallback | ✅ working |
 | — | Demo account seeding | ✅ working |
+| — | **DPDP Act 2023 compliance layer**: explicit consent gate at registration (server-enforced), itemised privacy notice, Privacy + Terms pages, grievance-officer placeholder, children's-data confirmation | ✅ working |
+| — | **Data-principal rights implemented**: one-click full data export (`GET /api/me/export`), complete erasure incl. uploaded files (`DELETE /api/me`) | ✅ working |
+
+## Legal & compliance notes
+
+Grounded in the **Digital Personal Data Protection Act, 2023** and DPDP Rules, 2025:
+
+- **Consent** is free, specific, informed and given by clear affirmative action at signup;
+  server rejects registration without it; withdrawal (account deletion) is as easy as giving it.
+- **Itemised notice**: the Privacy page lists every data item collected with its exact purpose.
+- **Rights**: access (export), correction (edit in app), erasure (self-service delete),
+  grievance redressal, nomination — all described in plain language.
+- **Children's data**: adding a minor requires the account holder to confirm they are a parent
+  or lawful guardian (DPDP s.9).
+- **Grievance Officer contact placeholder must be filled before launch** (required publication).
+- The Privacy/Terms pages are templates — **get a lawyer's review before real patient use**.
+
+### Hospital comparison & doctor policy (defamation-safe)
+
+Hospitals are compared only on objective, publicly citable facts — ownership type,
+NABH accreditation status, government scheme empanelment, capability breadth — each fact
+carrying its source link and as-of date. Corporate ownership is recorded as a neutral
+fact (it earns no score bonus). There are no user reviews anywhere in the platform, and
+individual doctors are never scored or ranked. Patients get official self-check links:
+[NABH directory](https://nabh.co/find-a-healthcare-organisation/),
+[PM-JAY find-hospital](https://hospitals.pmjay.gov.in/Search/empnlWorkFlow.htm?actionFlag=ViewRegisteredHosptlsNew),
+[state-wise PM-JAY de-empanelment list](https://snomedct.abdm.gov.in/hospital/de-empanelled)
+(fraud/quality actions), [e-Daakhil consumer forum](https://edaakhil.nic.in/), and the
+[NMC Indian Medical Register](https://www.nmc.org.in/information-desk/indian-medical-register/).
 
 Known limitations (honest list): CTRI has **no public API** so Indian-registry trials appear
 only as clearly-marked example rows pending an official interface; scanned-image OCR needs a

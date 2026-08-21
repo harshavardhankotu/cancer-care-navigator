@@ -169,6 +169,84 @@ SPECIALIST_CENTERS = [
      "cancer_types": ["any"]},
 ]
 
+# Objective, citable public facts — the raw material for transparent hospital
+# comparison. Every entry carries a source URL the patient can check directly.
+# We deliberately do NOT aggregate user reviews ("bought reviews" problem) and we
+# do NOT rank individual doctors.
+NABH_DIR = "https://nabh.co/find-a-healthcare-organisation/"
+PMJAY_FIND = "https://hospitals.pmjay.gov.in/Search/empnlWorkFlow.htm?actionFlag=ViewRegisteredHosptlsNew"
+PMJAY_DEEMP = "https://snomedct.abdm.gov.in/hospital/de-empanelled"
+
+HOSPITAL_NOTES = [
+    {"center_name": "Tata Memorial Centre (TMH)", "note_type": "ownership",
+     "detail": "Public-funded institution under the Department of Atomic Energy, Government of India.",
+     "source_name": "tmc.gov.in", "source_url": "https://tmc.gov.in/"},
+    {"center_name": "Tata Memorial Centre (TMH)", "note_type": "accreditation",
+     "detail": "Long-standing national accreditation; verify current status in the public NABH directory.",
+     "source_name": "NABH public directory", "source_url": NABH_DIR},
+    {"center_name": "Tata Memorial Centre (TMH)", "note_type": "scheme_empanelment",
+     "detail": "Searchable in the official PM-JAY empanelled-hospital portal (cashless treatment for eligible beneficiaries).",
+     "source_name": "NHA PM-JAY Find-Hospital", "source_url": PMJAY_FIND},
+
+    {"center_name": "Dr. B.R.A. Institute Rotary Cancer Hospital, AIIMS New Delhi", "note_type": "ownership",
+     "detail": "Part of AIIMS New Delhi, an Institute of National Importance under the Ministry of Health & Family Welfare.",
+     "source_name": "aiims.edu", "source_url": "https://www.aiims.edu/"},
+    {"center_name": "Dr. B.R.A. Institute Rotary Cancer Hospital, AIIMS New Delhi", "note_type": "accreditation",
+     "detail": "AIIMS New Delhi facilities have held national accreditation; verify current scope in the NABH directory.",
+     "source_name": "NABH public directory", "source_url": NABH_DIR},
+
+    {"center_name": "Cancer Institute (WIA), Adyar", "note_type": "ownership",
+     "detail": "Non-profit autonomous institution, state-aided; known historically for subsidised/free cancer care.",
+     "source_name": "cancerinstitutewia.in", "source_url": "https://www.cancerinstitutewia.in/"},
+    {"center_name": "Cancer Institute (WIA), Adyar", "note_type": "accreditation",
+     "detail": "Verify current accreditation status in the public NABH directory.",
+     "source_name": "NABH public directory", "source_url": NABH_DIR},
+
+    {"center_name": "Basavatarakam Indo-American Cancer Hospital & Research Institute", "note_type": "ownership",
+     "detail": "Run by a charitable trust (non-profit model).",
+     "source_name": "basavatarakam.org", "source_url": "https://basavatarakam.org/"},
+
+    {"center_name": "Apollo Proton Cancer Centre", "note_type": "ownership",
+     "detail": "Corporate hospital group (Apollo Hospitals Enterprise Ltd., a listed company). Ownership type matters: corporate chains have commercial incentives patients should weigh alongside quality indicators.",
+     "source_name": "apollohospitals.com investor page", "source_url": "https://www.apollohospitals.com/investors/"},
+    {"center_name": "Apollo Proton Cancer Centre", "note_type": "accreditation",
+     "detail": "Apollo group facilities have held NABH and JCI accreditations; verify THIS unit's current status in the directories.",
+     "source_name": "NABH public directory", "source_url": NABH_DIR},
+
+    {"center_name": "Rajiv Gandhi Cancer Institute & Research Centre", "note_type": "ownership",
+     "detail": "Managed by a registered not-for-profit society.",
+     "source_name": "rgcirc.org", "source_url": "https://www.rgcirc.org/"},
+    {"center_name": "Rajiv Gandhi Cancer Institute & Research Centre", "note_type": "accreditation",
+     "detail": "Has publicly reported national accreditation; verify current status in the NABH directory.",
+     "source_name": "NABH public directory", "source_url": NABH_DIR},
+
+    {"center_name": "Regional Cancer Centre, PGIMER", "note_type": "ownership",
+     "detail": "PGIMER is an Institute of National Importance (central government); the Regional Cancer Centre sits within it.",
+     "source_name": "pgimer.edu.in", "source_url": "https://pgimer.edu.in/"},
+    {"center_name": "Regional Cancer Centre, PGIMER", "note_type": "scheme_empanelment",
+     "detail": "Public teaching hospitals typically participate in central/state health schemes; confirm on PM-JAY portal.",
+     "source_name": "NHA PM-JAY Find-Hospital", "source_url": PMJAY_FIND},
+
+    {"center_name": "Kidwai Memorial Institute of Oncology", "note_type": "ownership",
+     "detail": "Government of Karnataka-run regional cancer centre with subsidised care mandate.",
+     "source_name": "Karnataka Health Dept.", "source_url": "https://karunadu.karnataka.gov.in/hfw/kidwai"},
+    {"center_name": "Kidwai Memorial Institute of Oncology", "note_type": "scheme_empanelment",
+     "detail": "Searchable in the official PM-JAY empanelled-hospital portal.",
+     "source_name": "NHA PM-JAY Find-Hospital", "source_url": PMJAY_FIND},
+]
+
+# Where ANY patient can independently check ANY hospital (public knowledge,
+# free access). Shown in the UI next to scores.
+PUBLIC_CHECK_LINKS = [
+    {"label": "Check accreditation (NABH public directory)", "url": NABH_DIR},
+    {"label": "Check PM-JAY empanelment (official portal)", "url": PMJAY_FIND},
+    {"label": "Check if a hospital was DE-empanelled by PM-JAY (fraud/quality actions)",
+     "url": PMJAY_DEEMP},
+    {"label": "Check consumer-forum cases (e-Daakhil / NCDRC case search)", "url": "https://edaakhil.nic.in/"},
+    {"label": "Check doctor registration (National Medical Commission register)", "url": "https://www.nmc.org.in/information-desk/indian-medical-register/"},
+
+]
+
 DOCTORS = [
     {"name": "Senior Consultant, Medical Oncology (Breast & GI) [placeholder]",
      "credentials": "MD, DM (Medical Oncology)",

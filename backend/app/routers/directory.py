@@ -6,15 +6,55 @@ from sqlalchemy.orm import Session
 
 from ..auth import get_current_family, owned_case
 from ..database import get_db
-from ..models import (Family, SpecialistCenter, TransferRequest, WaitTimeReport)
+from ..models import (Family, HospitalNote, SpecialistCenter, TransferRequest,
+                      WaitTimeReport)
 from ..schemas import CenterOut, TransferIn, TransferOut, WaitReportIn
+from ..seed_data import PUBLIC_CHECK_LINKS
 
 router = APIRouter(prefix="/api", tags=["directory"])
 
+# ---- Transparent, fact-based comparison (NOT a quality rating) ----
+# Score = sum of verifiable public facts only. Full breakdown is returned with
+# every centre so patients can see exactly where each point comes from.
+SCORE_WEIGHTS = {
+    "public_or_nonprofit_ownership": 3,
+    "national_accreditation_noted": 2,
+    "scheme_empanelment_noted": 2,
+    "capability_breadth": 3,  # scaled: 1-4 caps=1, 5-7=2, 8+=3
+}
+NOTE_TYPE_TO_FACTOR = {
+    "ownership": "public_or_nonprofit_ownership",
+    "accreditation": "national_accreditation_noted",
+    "scheme_empanelment": "scheme_empanelment_noted",
+}
 
-@router.get("/centers", response_model=list[CenterOut])
+
+def _is_public_nonprofit(detail: str) -> bool:
+    d = detail.lower()
+    return any(k in d for k in (
+        "government", "public-funded", "public funded", "non-profit", "nonprofit",
+        "charitable trust", "not-for-profit", "state-aided", "institute of national importance"))
+
+
+def _score_center(center: SpecialistCenter, notes: list[HospitalNote]) -> dict:
+    breakdown = {k: 0 for k in SCORE_WEIGHTS}
+    caps = len(center.capabilities or [])
+    breakdown["capability_breadth"] = 1 if caps <= 4 else (2 if caps <= 7 else 3)
+    for n in notes:
+        factor = NOTE_TYPE_TO_FACTOR.get(n.note_type)
+        if not factor or breakdown[factor] > 0:  # first matching note scores; extras don't stack
+            continue
+        if n.note_type == "ownership" and _is_public_nonprofit(n.detail):
+            breakdown[factor] = SCORE_WEIGHTS[factor]
+        elif n.note_type in ("accreditation", "scheme_empanelment"):
+            breakdown[factor] = SCORE_WEIGHTS[factor]
+    total = sum(breakdown.values())
+    return {"total": total, "max": sum(SCORE_WEIGHTS.values()), "breakdown": breakdown}
+
+
+@router.get("/centers")
 def list_centers(cancer_type: str | None = None, capability: str | None = None,
-                 db: Session = Depends(get_db)):
+                 sort: str = "score", db: Session = Depends(get_db)):
     centers = db.query(SpecialistCenter).all()
     if cancer_type:
         ct = cancer_type.lower()
@@ -23,7 +63,50 @@ def list_centers(cancer_type: str | None = None, capability: str | None = None,
     if capability:
         cap = capability.lower()
         centers = [c for c in centers if any(cap in x.lower() for x in (c.capabilities or []))]
-    return centers
+
+    out = []
+    for c in centers:
+        notes = db.query(HospitalNote).filter(HospitalNote.center_id == c.id).all()
+        out.append({
+            **CenterOut.model_validate(c).model_dump(),
+            "notes": [{
+                "note_type": n.note_type, "detail": n.detail,
+                "source_name": n.source_name, "source_url": n.source_url,
+                "as_of_date": n.as_of_date.isoformat() if n.as_of_date else None,
+            } for n in notes],
+            "objective_score": _score_center(c, notes),
+        })
+    if sort == "score":
+        out.sort(key=lambda x: (-x["objective_score"]["total"], (x["name"] or "").lower()))
+    else:
+        out.sort(key=lambda x: (x["name"] or "").lower())
+    return out
+
+
+@router.get("/centers/methodology")
+def ranking_methodology():
+    """Full transparency: what the score counts, what it ignores, and where
+    patients can verify ANY hospital themselves."""
+    return {
+        "title": "How centres are compared — full transparency",
+        "principles": [
+            "We use ONLY objective, publicly citable facts — never user reviews, which are "
+            "easy to buy and game.",
+            "This is NOT a quality ranking and NOT medical advice. A high score does not mean "
+            "'best for your case' — that decision belongs to you and your treating doctors.",
+            "Individual doctors are deliberately NOT scored. Doctor ratings invite gaming and "
+            "legal risk; instead we show verifiable credential fields once curated.",
+        ],
+        "weights": SCORE_WEIGHTS,
+        "what_we_cannot_measure": [
+            "Clinical outcomes per hospital (India has no public per-hospital cancer outcome data)",
+            "Doctor skill (deferred to NMC/state council registers during human curation)",
+            "Your personal clinical situation",
+        ],
+        "verify_any_hospital_yourself": PUBLIC_CHECK_LINKS,
+        "disclaimer": ("Facts change; every note carries its source link and as-of date. "
+                       "Always verify at the source before making decisions."),
+    }
 
 
 @router.get("/centers/wait-summary")

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api } from '../api.js'
+import { api, downloadFile } from '../api.js'
 import { ErrorBox } from '../components/Layout.jsx'
+import { useAuth } from '../auth.jsx'
 
 const empty = { patient_name: '', cancer_type: '', patient_age: '', patient_sex: 'unknown', stage: '', diagnosis_date: '', current_status: '' }
 
@@ -11,6 +12,7 @@ export default function Dashboard() {
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const { email, logout } = useAuth()
 
   const load = () => api('/cases').then(setCases).catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
@@ -29,6 +31,15 @@ export default function Dashboard() {
       const c = await api('/cases', { method: 'POST', body })
       setForm(empty); setShowForm(false)
       navigate(`/cases/${c.id}`)
+    } catch (err) { setError(err.message) }
+  }
+
+  const deleteAccount = async () => {
+    if (!window.confirm('This permanently deletes your account, all cases, documents and files (DPDP right to erasure). Continue?')) return
+    if (!window.confirm('Are you absolutely sure? This cannot be undone.')) return
+    try {
+      await api('/me', { method: 'DELETE' })
+      logout(); navigate('/login')
     } catch (err) { setError(err.message) }
   }
 
@@ -55,6 +66,11 @@ export default function Dashboard() {
           <div><label className="label">Diagnosis date</label><input className="input" type="date" value={form.diagnosis_date} onChange={set('diagnosis_date')} /></div>
           <div className="md:col-span-2"><label className="label">Current status / treatment plan (free text — drives decision-risk flags)</label>
             <textarea className="input" rows={2} value={form.current_status} onChange={set('current_status')} /></div>
+          <div className="md:col-span-2 text-[11px] text-slate-400">
+            Why we ask exactly these fields: the decision-flag engine matches published guideline
+            risks against them (e.g., radiation started before biomarker testing). All of it stays
+            private to your account — never sold or shared.
+          </div>
           <div><button className="btn-primary">Create case</button></div>
         </form>
       )}
@@ -81,6 +97,17 @@ export default function Dashboard() {
           </Link>
         ))}
       </div>
+
+      <section className="card mt-6">
+        <h2 className="font-semibold mb-1">Account &amp; your data rights (DPDP Act 2023)</h2>
+        <p className="text-xs text-slate-500 mb-3">Signed in as {email}. Your consent was recorded at signup; you can withdraw it here as easily as you gave it.</p>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-secondary" onClick={() => downloadFile('/me/export', 'my-data.json').catch((e) => setError(e.message))}>
+            Download my data (JSON)
+          </button>
+          <button className="btn-danger" onClick={deleteAccount}>Delete my account &amp; all data</button>
+        </div>
+      </section>
     </div>
   )
 }

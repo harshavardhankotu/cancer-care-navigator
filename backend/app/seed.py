@@ -7,10 +7,11 @@ Also runs automatically on app startup.
 from sqlalchemy.orm import Session
 
 from .database import SessionLocal, engine, Base
-from .models import (CoverageScheme, Doctor, ForeclosureRule,
+from .models import (CoverageScheme, Doctor, ForeclosureRule, HospitalNote,
                      PatientAssistanceProgram, SpecialistCenter, Trial)
 from .seed_data import (COVERAGE_SCHEMES, DOCTORS, FORECLOSURE_RULES,
-                        PATIENT_ASSISTANCE_PROGRAMS, SPECIALIST_CENTERS, TRIALS)
+                        HOSPITAL_NOTES, PATIENT_ASSISTANCE_PROGRAMS,
+                        SPECIALIST_CENTERS, TRIALS)
 
 
 def _seed(db: Session) -> None:
@@ -40,6 +41,16 @@ def _seed(db: Session) -> None:
     if db.query(PatientAssistanceProgram).count() == 0:
         for p in PATIENT_ASSISTANCE_PROGRAMS:
             db.add(PatientAssistanceProgram(**p))
+    from datetime import date as _date
+    if db.query(HospitalNote).count() == 0 and db.query(SpecialistCenter).count() > 0:
+        by_name = {c.name: c for c in db.query(SpecialistCenter).all()}
+        for n in HOSPITAL_NOTES:
+            center = by_name.get(n["center_name"])
+            if not center:
+                continue
+            db.add(HospitalNote(center_id=center.id, note_type=n["note_type"],
+                                detail=n["detail"], source_name=n["source_name"],
+                                source_url=n["source_url"], as_of_date=_date.today()))
     db.commit()
 
 
@@ -54,7 +65,8 @@ def _seed_demo(db: Session) -> None:
 
     if db.query(Family).filter(Family.email == "demo@navigator.app").first():
         return
-    fam = Family(email="demo@navigator.app", password_hash=hash_password("demo1234"))
+    fam = Family(email="demo@navigator.app", password_hash=hash_password("demo1234"),
+                 consent_accepted=True, consent_at=datetime.utcnow())
     db.add(fam)
     db.commit()
     db.refresh(fam)

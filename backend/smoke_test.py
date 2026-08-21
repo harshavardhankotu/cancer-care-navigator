@@ -34,8 +34,13 @@ with client:
     check("health", r.status_code == 200)
 
     print("== auth & scoping ==")
-    tok_a = client.post("/api/auth/register", json={"email": "fam-a@test.com", "password": "secret1"}).json()["token"]
-    tok_b = client.post("/api/auth/register", json={"email": "fam-b@test.com", "password": "secret2"}).json()["token"]
+    check("register WITHOUT consent rejected (DPDP)",
+          client.post("/api/auth/register",
+                      json={"email": "no-consent@test.com", "password": "secret1"}).status_code == 400)
+    tok_a = client.post("/api/auth/register", json={"email": "fam-a@test.com", "password": "secret1",
+                                                    "consent_accepted": True}).json()["token"]
+    tok_b = client.post("/api/auth/register", json={"email": "fam-b@test.com", "password": "secret2",
+                                                    "consent_accepted": True}).json()["token"]
     check("register two families", bool(tok_a) and bool(tok_b))
     check("no token -> 401", client.get("/api/cases").status_code == 401)
     check("bad login -> 401",
@@ -185,5 +190,28 @@ with client:
     demo_tok = demo_login.json()["token"]
     demo_cases = client.get("/api/cases", headers=auth(demo_tok)).json()
     check("demo case present with documents", len(demo_cases) >= 1)
+
+    print("== new: hospital comparison + DPDP rights ==")
+    centers = client.get("/api/centers").json()
+    top = centers[0]
+    check("centres ranked by objective score with breakdown",
+          top["objective_score"]["total"] > 0 and
+          set(top["objective_score"]["breakdown"]) >= {"public_or_nonprofit_ownership",
+                                                       "national_accreditation_noted"})
+    check("centre notes carry verifiable sources",
+          all(n.get("source_url") for c in centers for n in c["notes"]))
+    corp = next(c for c in centers if "Apollo" in c["name"])
+    check("corporate ownership recorded as neutral fact (no bonus)",
+          corp["objective_score"]["breakdown"]["public_or_nonprofit_ownership"] == 0)
+    method = client.get("/api/centers/methodology").json()
+    check("methodology published with weights + self-check links",
+          bool(method["weights"]) and len(method["verify_any_hospital_yourself"]) >= 4)
+    exp = client.get("/api/me/export", headers=auth(tok_a)).json()
+    check("DPDP right of access: full export works", len(exp["cases"]) >= 1)
+    deleted = client.delete("/api/me", headers=auth(tok_b)).json()
+    check("DPDP right to erasure: account deleted", deleted["deleted"] is True)
+    check("deleted family cannot login",
+          client.post("/api/auth/login", json={"email": "fam-b@test.com",
+                                               "password": "secret2"}).status_code == 401)
 
 print(f"\nALL {PASS} SMOKE CHECKS PASSED")

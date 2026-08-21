@@ -8,7 +8,9 @@ export const DISCLAIMER =
 export function DisclaimerBar() {
   return (
     <footer className="fixed bottom-0 inset-x-0 bg-amber-100 border-t border-amber-300 text-amber-900 text-xs px-4 py-2 text-center z-40">
-      ⚠️ {DISCLAIMER}
+      ⚠️ {DISCLAIMER}{' '}
+      <Link to="/privacy" className="underline ml-2">Privacy</Link> ·{' '}
+      <Link to="/terms" className="underline">Terms</Link>
     </footer>
   )
 }

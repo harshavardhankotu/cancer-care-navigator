@@ -15,9 +15,16 @@ export default function Doctors() {
   return (
     <div>
       <h1 className="text-xl font-bold mb-1">Doctor directory</h1>
+      <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-3 text-xs text-blue-900">
+        <strong>Why there are no doctor rankings here:</strong> doctor ratings are easy to game
+        ("bought reviews") and expose platforms to defamation claims. We only display verifiable,
+        credential-level fields — checked by a human curator against public registers such as the{' '}
+        <a className="underline" href="https://www.nmc.org.in/information-desk/indian-medical-register/" target="_blank" rel="noreferrer">
+          NMC Indian Medical Register ↗</a>. All entries below are role-level placeholders until
+        that curation happens.
+      </div>
       <p className="text-xs text-slate-500 mb-3">
-        All entries below are role-level placeholders — no real individuals are listed. A human must
-        curate verified contacts before this directory is usable for real outreach.
+        Filter by specialty; sort order below is alphabetical, not a ranking.
       </p>
       <ErrorBox error={error} />
       <div className="card mb-4"><label className="label">Filter by specialty</label>

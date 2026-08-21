@@ -13,10 +13,18 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 def register(body: FamilyCreate, db: Session = Depends(get_db)):
     if "@" not in body.email or len(body.password) < 6:
         raise HTTPException(status_code=400, detail="Valid email and 6+ char password required")
+    if not body.consent_accepted:
+        raise HTTPException(
+            status_code=400,
+            detail="Explicit consent is required before we process any personal data "
+                   "(Digital Personal Data Protection Act, 2023). Please accept the "
+                   "privacy notice to register.")
+    from datetime import datetime
     existing = db.query(Family).filter(Family.email == body.email.lower()).first()
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")
-    family = Family(email=body.email.lower(), password_hash=hash_password(body.password))
+    family = Family(email=body.email.lower(), password_hash=hash_password(body.password),
+                    consent_accepted=True, consent_at=datetime.utcnow())
     db.add(family)
     db.commit()
     db.refresh(family)

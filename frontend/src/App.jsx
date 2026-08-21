@@ -10,6 +10,8 @@ import Centers from './pages/Centers.jsx'
 import Doctors from './pages/Doctors.jsx'
 import CoverageCheck from './pages/CoverageCheck.jsx'
 import PackageShareView from './pages/PackageShareView.jsx'
+import Privacy from './pages/Privacy.jsx'
+import Terms from './pages/Terms.jsx'
 
 export default function App() {
   return (
@@ -24,6 +26,8 @@ export default function App() {
           <Route path="/centers" element={<Centers />} />
           <Route path="/doctors" element={<RequireAuth><Doctors /></RequireAuth>} />
           <Route path="/coverage-check" element={<CoverageCheck />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
         </Route>
       </Routes>
     </AuthProvider>
