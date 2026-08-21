@@ -26,6 +26,7 @@ export default function PlanTab({ caseId }) {
       <p className="text-xs text-slate-500 mb-3">
         Personalised for this case (country: <strong>{plan.country}</strong>) using public,
         citable information only. Not medical advice — decisions rest with you and your doctors.
+        <span className="block mt-1 bg-blue-50 border border-blue-200 text-blue-900 rounded px-2 py-1">{plan.audience_note}</span>
       </p>
 
       <section className="card mb-4">
@@ -55,16 +56,24 @@ export default function PlanTab({ caseId }) {
             </ul>
           </details>
         )}
+        {plan.plan_tier === 'free' && (
+          <p className="text-[11px] text-slate-400 mt-2">
+            Showing top 6 per list — supporters see up to 12 (see “Support” page). Everything essential stays free.
+          </p>
+        )}
       </section>
 
       <section className="card mb-4">
         <h2 className="font-semibold mb-1">💰 Coverage you may qualify for</h2>
-        <p className="text-xs text-slate-500 mb-2">Rules-based match vs your financial profile — always confirm with the scheme itself.</p>
+        <p className="text-xs text-slate-500 mb-2">
+          Rules-based match vs your financial profile — always confirm with the scheme itself.
+          💎 marks programmes most patients have never heard of.
+        </p>
         {eligible.length === 0 && <p className="text-sm text-slate-500">No schemes found for {plan.country}. Add your financial details in the Finance tab.</p>}
         {eligible.map((s) => (
           <details key={s.scheme_id} className={`border rounded p-2 mb-2 text-sm border-l-4 ${STATUS_STYLE[s.status]}`}>
             <summary className="cursor-pointer font-medium">
-              {s.scheme_name}
+              {s.category && s.category !== 'general' ? '💎 ' : ''}{s.scheme_name}
               <span className="ml-2 text-xs font-semibold uppercase text-slate-500">{s.status.replace(/_/g, ' ')}</span>
             </summary>
             <p className="text-xs text-slate-600 mt-1">{s.summary}</p>

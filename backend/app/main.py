@@ -30,6 +30,8 @@ def _ensure_columns() -> None:
         add("families", "consent_accepted", "BOOLEAN DEFAULT 0")
         add("families", "consent_at", "DATETIME")
         add("families", "country", "VARCHAR(10)")
+        add("families", "plan_tier", "VARCHAR(20) DEFAULT 'free'")
+        add("coverage_schemes", "category", "VARCHAR(30) DEFAULT 'general'")
         add("cases", "country", "VARCHAR(10) DEFAULT 'IN'")
         add("specialist_centers", "country", "VARCHAR(10) DEFAULT 'IN'")
         add("coverage_schemes", "country", "VARCHAR(10) DEFAULT 'IN'")

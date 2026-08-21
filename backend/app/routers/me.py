@@ -62,7 +62,8 @@ def export_my_data(db: Session = Depends(get_db), family=Depends(get_current_fam
     return {
         "account": {"email": family.email, "created_at": family.created_at.isoformat(),
                     "consent_accepted": family.consent_accepted,
-                    "consent_at": family.consent_at.isoformat() if family.consent_at else None},
+                    "consent_at": family.consent_at.isoformat() if family.consent_at else None,
+                    "country": family.country, "plan_tier": family.plan_tier},
         "cases": [_case_dict(db, c) for c in cases],
         "notice": "You can request correction or deletion of any of this data at any "
                   "time. Deletion is self-service via DELETE /api/me.",

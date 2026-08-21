@@ -10,9 +10,9 @@ from .database import SessionLocal, engine, Base
 from .models import (CoverageScheme, Doctor, ForeclosureRule, HospitalNote,
                      PatientAssistanceProgram, SpecialistCenter, Trial)
 from .seed_data import (COVERAGE_SCHEMES, DOCTORS, FORECLOSURE_RULES,
-                        GLOBAL_PAPS, GLOBAL_SCHEMES, HOSPITAL_NOTES,
-                        PATIENT_ASSISTANCE_PROGRAMS, SPECIALIST_CENTERS,
-                        TRIALS, WORLD_CENTERS)
+                        GLOBAL_PAPS, GLOBAL_SCHEMES, HIDDEN_SUBSIDY_SCHEMES,
+                        HOSPITAL_NOTES, PATIENT_ASSISTANCE_PROGRAMS,
+                        SPECIALIST_CENTERS, TRIALS, WORLD_CENTERS)
 
 
 def _seed(db: Session) -> None:
@@ -66,6 +66,10 @@ def _seed(db: Session) -> None:
                 db.add(HospitalNote(center_id=center.id, as_of_date=_date.today(), **n))
     if db.query(CoverageScheme).filter(CoverageScheme.country != "IN").count() == 0:
         for s in GLOBAL_SCHEMES:
+            db.add(CoverageScheme(**s))
+    if db.query(CoverageScheme).filter(
+            CoverageScheme.category != "general").count() == 0:
+        for s in HIDDEN_SUBSIDY_SCHEMES:
             db.add(CoverageScheme(**s))
     if db.query(PatientAssistanceProgram).filter(
             PatientAssistanceProgram.manufacturer == "PAN Foundation").count() == 0:

@@ -1,0 +1,55 @@
+# Full-control deployment (Stage 2): one VPS runs app + Postgres + auto-HTTPS Caddy.
+# Works on any Docker host (Hetzner/Contabo/DigitalOcean ~$4–6/mo, or your own box).
+# You own the data, the backups, and the uptime. Scale later by moving DB to
+# managed Postgres and adding app replicas behind the same Caddy.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ccn
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: ccn
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ccn"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://ccn:${POSTGRES_PASSWORD}@db:5432/ccn
+      SECRET_KEY: ${SECRET_KEY:?set in .env}
+      STORAGE_DIR: /data/storage
+    volumes:
+      - appdata:/data/storage
+    depends_on:
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  appdata:
+  caddy_data:
+  caddy_config:

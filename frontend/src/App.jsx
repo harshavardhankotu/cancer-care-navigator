@@ -12,6 +12,7 @@ import CoverageCheck from './pages/CoverageCheck.jsx'
 import PackageShareView from './pages/PackageShareView.jsx'
 import Privacy from './pages/Privacy.jsx'
 import Terms from './pages/Terms.jsx'
+import Pricing from './pages/Pricing.jsx'
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/coverage-check" element={<CoverageCheck />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/support" element={<Pricing />} />
         </Route>
       </Routes>
     </AuthProvider>

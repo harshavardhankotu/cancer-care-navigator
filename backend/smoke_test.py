@@ -221,9 +221,8 @@ with client:
           bool(method.get("designation_tiers")) and
           len(method["verify_any_hospital_yourself"]) >= 4)
     schemes_us = client.get("/api/schemes", params={"country": "US"}).json()
-    check("schemes scoped by country", len(schemes_us) >= 3 and
-          all(s["scheme_name"].endswith("(US)") or "501(r)" in s["scheme_name"] or "Medicaid" in s["scheme_name"]
-              or "Medicare" in s["scheme_name"] or "ACA" in s["scheme_name"] for s in schemes_us))
+    check("schemes scoped by country (incl. hidden NORD entry)", len(schemes_us) >= 4
+          and all(s["country"] == "US" for s in schemes_us))
 
     print("== personalization: My Plan ==")
     plan = client.get(f"/api/cases/{cid}/personal-plan", headers=auth(tok_a)).json()
@@ -232,6 +231,37 @@ with client:
           and isinstance(plan["schemes"], list) and isinstance(plan["trials"], list))
     check("plan questions generated from open flags",
           len(plan["questions_to_ask"]) >= 1 and plan["questions_to_ask"][0]["question"])
+    check("audience framing present (broke vs budgeted)", bool(plan["audience_note"]))
+    hidden = [s for s in plan["schemes"] if s.get("category") == "travel"]
+    check("hidden subsidies (rail concession) surface first for IN", len(hidden) >= 1)
+
+    print("== trials depth + freemium tier ==")
+    live = client.get("/api/trials/search", params={"cancer_type": "breast", "country": "IN"},
+                      headers=auth(tok_a)).json()["results"]
+    enriched = next((t for t in live if t.get("live")), None)
+    if enriched:
+        check("trials carry phase/enrolment/interventions/priority",
+              all(k in enriched for k in ("phase_label", "enrollment", "interventions",
+                                          "priority_score", "priority_why")))
+        scores = [t["priority_score"] for t in live if t.get("live")]
+        check("trials ordered by importance after country priority", scores == sorted(scores, reverse=True))
+    else:
+        print("  skip - offline: no live trial data available")
+    free_plan = client.get(f"/api/cases/{cid}/personal-plan?extended=true",
+                           headers=auth(tok_a)).json()
+    check("free tier stays capped at 6 centres", len(free_plan["global_centres"]) <= 6)
+    from app.database import SessionLocal as _SL
+    from app.models import Family as _Fam
+    _db = _SL()
+    _db.query(_Fam).filter(_Fam.email == "fam-a@test.com").update({"plan_tier": "supporter"})
+    _db.commit(); _db.close()
+    case_s = client.post("/api/cases", headers=auth(tok_a),
+                         json={"patient_name": "Supporter Case", "cancer_type": "breast"}).json()
+    sup_plan = client.get(f"/api/cases/{case_s['id']}/personal-plan?extended=true",
+                          headers=auth(tok_a)).json()
+    check("supporter tier unlocks extended lists",
+          sup_plan["plan_tier"] == "supporter"
+          and len(sup_plan["global_centres"]) >= len(free_plan["global_centres"]))
     case_gb = client.post("/api/cases", headers=auth(tok_a), json={
         "patient_name": "GB Patient", "cancer_type": "breast", "country": "GB"}).json()
     client.put(f"/api/cases/{case_gb['id']}/financial-profile", headers=auth(tok_a),

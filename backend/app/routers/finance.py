@@ -62,6 +62,7 @@ def list_schemes(country: str | None = None, db: Session = Depends(get_db)):
         schemes = [s for s in schemes if (s.country or "").upper() == ctry]
     return [{
         "id": s.id, "scheme_name": s.scheme_name, "country": s.country,
+        "category": s.category,
         "eligibility_summary": (s.eligibility_criteria_json or {}).get("summary"),
         "covered_treatments": s.covered_treatments, "network_hospitals": s.network_hospitals,
         "coverage_limit": s.coverage_limit, "exclusions": s.exclusions,

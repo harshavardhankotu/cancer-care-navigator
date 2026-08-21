@@ -1,0 +1,13 @@
+{
+  "name": "Cancer Care Navigator",
+  "short_name": "CareNav",
+  "description": "Organizes your cancer records, flags guideline-sourced questions, and finds schemes, centres and trials near you. Not medical advice.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

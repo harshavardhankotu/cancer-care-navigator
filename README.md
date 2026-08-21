@@ -40,7 +40,33 @@ ephemeral unless you add a paid persistent disk — use the Neon DB as source of
 
 ---
 
+## 🚀 Deployment at scale — with complete control
+
+| Stage | Setup | Cost | Control | Use when |
+|---|---|---|---|---|
+| 0 | Local dev (SQLite) | $0 | full | building |
+| 1 | Render + Neon (`render.yaml`) | $0 | low (platform-managed) | first public users |
+| **2** | **Single VPS: `docker compose up` + Caddy auto-HTTPS** | ~$4–6/mo (or your own hardware = $0) | **full — you own data, backups, uptime** | serious rollout |
+| 3 | Split: managed Postgres + N app replicas + S3 storage | usage-based | high | large scale |
+
+Stage 2 quick start:
+```bash
+cp .env.example .env   # fill DOMAIN, POSTGRES_PASSWORD, SECRET_KEY
+docker compose up -d --build
+./scripts/backup.sh    # add to cron nightly: 0 3 * * *
+```
+Caddy issues/renews TLS automatically. Scale path: point `DATABASE_URL` at managed Postgres,
+raise app replicas behind the same Caddy, move `STORAGE_DIR` to object storage.
+
+## 📱 App + browser
+
+The frontend is an installable PWA: on Android/Chrome and iOS/Safari choose
+“Add to Home Screen” — it runs full-screen like a native app, works offline for cached
+pages, and always fetches fresh health data over the network (API responses are never cached).
+
 ## Quick start (local)
+
+
 
 ### One command (after first-time setup)
 

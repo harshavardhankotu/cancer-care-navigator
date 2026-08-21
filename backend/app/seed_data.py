@@ -808,3 +808,96 @@ GLOBAL_PAPS = [
      "application_process": "Apply online for an open disease fund. Verify.",
      "verified_by": "public info — verify", "last_verified_date": TODAY},
 ]
+
+# =====================================================================
+# HIDDEN SUBSIDIES (v0.4) — real programmes most patients never hear about.
+# category: rare_hidden | travel | drug_access — surfaced prominently in the UI.
+# =====================================================================
+HIDDEN_SUBSIDY_SCHEMES = [
+    {"country": "IN", "category": "travel",
+     "scheme_name": "Indian Railways 75% cancer-patient travel concession",
+     "eligibility_criteria_json": {
+        "summary": "Cancer patients travelling for treatment get a 75% fare concession in Mail/Express trains, and the accompanying escort gets one too. Ask at any reservation counter with your diagnosis certificate.",
+        "checks": []},
+     "covered_treatments": ["train tickets for treatment travel + escort"],
+     "network_hospitals": [], "coverage_limit": "75% of fare",
+     "exclusions": ["not applicable to premium trains like Rajdhani/Shatabdi classes where concession lists differ"],
+     "last_verified_date": TODAY},
+
+    {"country": "IN", "category": "rare_hidden",
+     "scheme_name": "National Policy for Rare Diseases (India) - funding at Centres of Excellence",
+     "eligibility_criteria_json": {
+        "summary": "India's rare-disease policy provides financial support (up to Rs. 50 lakh) for treatment of specified rare diseases at notified Centres of Excellence. Many families never hear of it - apply through the CoE.",
+        "checks": []},
+     "covered_treatments": ["treatment of notified rare diseases at designated CoEs"],
+     "network_hospitals": ["Notified CoEs: AIIMS Delhi, PGIMER Chandigarh, KEM Mumbai, NIMHANS Bengaluru and others"],
+     "coverage_limit": "Up to Rs. 50 lakh per patient (as notified)",
+     "exclusions": ["disease must be on the notified list; fund availability varies"],
+     "last_verified_date": TODAY},
+
+    {"country": "JP", "category": "rare_hidden",
+     "scheme_name": "Nanbyo medical subsidy (Japan, intractable diseases)",
+     "eligibility_criteria_json": {
+        "summary": "Japan's Nanbyo system caps monthly co-payments for 300+ designated intractable diseases based on household income; many eligible patients are not registered. Apply at your municipal office with physician certification.",
+        "checks": []},
+     "covered_treatments": ["medical care costs for designated intractable diseases incl. many cancers treated as such"],
+     "network_hospitals": ["designated medical care institutions nationwide"],
+     "coverage_limit": "Monthly out-of-pocket cap scaled to income",
+     "exclusions": ["must be certified as a designated disease"],
+     "last_verified_date": TODAY},
+
+    {"country": "AU", "category": "drug_access",
+     "scheme_name": "Life Saving Drugs Program (Australia)",
+     "eligibility_criteria_json": {
+        "summary": "The Australian government supplies certain expensive life-saving medicines for rare diseases completely free to eligible patients - separate from the PBS. Check if your medicine is on the LSDP list.",
+        "checks": []},
+     "covered_treatments": ["specific orphan/expensive medicines for listed conditions"],
+     "network_hospitals": ["LSDP-accessed via treating specialist"],
+     "coverage_limit": "Free medicine for eligible patients",
+     "exclusions": ["medicine-specific criteria apply"],
+     "last_verified_date": TODAY},
+
+    {"country": "GB", "category": "rare_hidden",
+     "scheme_name": "NHS Highly Specialised Technologies & Individual Funding Requests (England)",
+     "eligibility_criteria_json": {
+        "summary": "Ultra-rare-disease drugs can be funded through NICE's Highly Specialised Technologies route, and individual patients can request non-routinely-funded treatments via an IFR raised by their NHS clinician.",
+        "checks": []},
+     "covered_treatments": ["highly specialised (often ultra-orphan) treatments; case-by-case IFR approvals"],
+     "network_hospitals": ["NHS trusts via treating clinician"],
+     "coverage_limit": "Case-dependent",
+     "exclusions": ["requires clinician sponsorship and evidence review"],
+     "last_verified_date": TODAY},
+
+    {"country": "US", "category": "drug_access",
+     "scheme_name": "NORD patient assistance programs (US rare diseases)",
+     "eligibility_criteria_json": {
+        "summary": "The National Organization for Rare Disorders runs medication assistance funds for many rare conditions, alongside manufacturer bridge programs. Search rarediseases.org for your diagnosis.",
+        "checks": []},
+     "covered_treatments": ["medication cost assistance for covered rare-disease funds"],
+     "network_hospitals": [],
+     "coverage_limit": "Fund-dependent",
+     "exclusions": ["funds open/close periodically"],
+     "last_verified_date": TODAY},
+
+    {"country": "CA", "category": "drug_access",
+     "scheme_name": "Provincial catastrophic / high-cost drug programs (e.g., Ontario Trillium)",
+     "eligibility_criteria_json": {
+        "summary": "Outside hospital, expensive take-home cancer drugs are covered by provincial programs (Ontario Trillium, BC PharmaCare etc.) once annual deductibles are met - applications are separate from your health card.",
+        "checks": []},
+     "covered_treatments": ["take-home prescription drugs after deductible"],
+     "network_hospitals": [],
+     "coverage_limit": "Deductible then large share of drug costs",
+     "exclusions": ["province-specific rules"],
+     "last_verified_date": TODAY},
+
+    {"country": "KR", "category": "rare_hidden",
+     "scheme_name": "Rare/intractable disease co-pay support (Korea)",
+     "eligibility_criteria_json": {
+        "summary": "Beyond the five-major-cancer programme, Korea's NHIS reduces co-payments to about 10% for registered rare/intractable diseases - registration is initiated by your doctor.",
+        "checks": []},
+     "covered_treatments": ["registered rare/intractable disease treatment"],
+     "network_hospitals": ["NHIS-contracted institutions"],
+     "coverage_limit": "~10% co-pay for registered conditions",
+     "exclusions": ["registration required"],
+     "last_verified_date": TODAY},
+]

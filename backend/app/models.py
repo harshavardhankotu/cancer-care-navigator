@@ -15,6 +15,7 @@ class Family(Base):
     consent_accepted: Mapped[bool] = mapped_column(Boolean, default=False)  # DPDP Act 2023
     consent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     country: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    plan_tier: Mapped[str] = mapped_column(String(20), default='free')  # free|supporter
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     cases = relationship("Case", back_populates="family")
@@ -199,6 +200,7 @@ class CoverageScheme(Base):
     __tablename__ = "coverage_schemes"
     id: Mapped[int] = mapped_column(primary_key=True)
     country: Mapped[str] = mapped_column(String(10), default="IN", index=True)
+    category: Mapped[str] = mapped_column(String(30), default="general")  # general|rare_hidden|travel|drug_access
     scheme_name: Mapped[str] = mapped_column(String(255))
     eligibility_criteria_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     covered_treatments: Mapped[list | None] = mapped_column(JSON, nullable=True)

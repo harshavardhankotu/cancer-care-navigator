@@ -29,10 +29,14 @@ router = APIRouter(prefix="/api/cases", tags=["personal-plan"])
 
 
 @router.get("/{case_id}/personal-plan")
-def personal_plan(case_id: int, db: Session = Depends(get_db),
+def personal_plan(case_id: int, extended: bool = False,
+                  db: Session = Depends(get_db),
                   family: Family = Depends(get_current_family)):
     case = owned_case(db, family, case_id)
     country = ((case.country or family.country or "IN") or "IN").upper()
+    is_supporter = family.plan_tier == "supporter"
+    local_limit = 12 if (extended and is_supporter) else 6
+    intl_limit = 12 if (extended and is_supporter) else 6
 
     # ---- 1. Centres: local first, then global ----
     scored = []
@@ -48,18 +52,34 @@ def personal_plan(case_id: int, db: Session = Depends(get_db),
         }
         scored.append(item)
     scored.sort(key=lambda x: (-x["score"], (x["name"] or "").lower()))
-    local = [c for c in scored if (c["country"] or "").upper() == country][:6]
-    intl = [c for c in scored if (c["country"] or "").upper() != country][:6]
+    local = [c for c in scored if (c["country"] or "").upper() == country][:local_limit]
+    intl = [c for c in scored if (c["country"] or "").upper() != country][:intl_limit]
 
     # ---- 2. Schemes for this country vs financial profile ----
     prof_row = db.query(CaseFinancialProfile).filter(CaseFinancialProfile.case_id == case.id).first()
     profile = {f: getattr(prof_row, f) for f in PROFILE_FIELDS} if prof_row else {}
     schemes = (db.query(CoverageScheme)
                .filter(CoverageScheme.country == country).all())
+    # Hidden subsidies first — most people never hear about these.
+    schemes.sort(key=lambda s: 0 if s.category != "general" else 1)
     scheme_results = sorted(
         (evaluate_scheme(s, profile) for s in schemes),
         key=lambda r: {"eligible": 0, "needs_verification": 1, "not_eligible": 2}[r["status"]],
     )
+
+    # Audience framing: broke vs budgeted get different emphasis (same facts).
+    insurance_status = (profile.get("insurance_status") or "unknown").lower()
+    has_budget = bool(profile.get("budget_ceiling"))
+    if insurance_status in ("uninsured", "unknown") and not has_budget:
+        audience_note = ("Focus on the public/charity options below first: government schemes, "
+                         "hospital financial-assistance offices, and patient-assistance "
+                         "programmes exist precisely for this situation.")
+    elif has_budget:
+        audience_note = ("With a budget ceiling set, you can also consider private and "
+                         "international centres — ask each hospital for an itemised cost "
+                         "estimate package before committing; compare against your ceiling.")
+    else:
+        audience_note = "Your coverage details shape which paths matter most — complete the Finance tab for sharper matching."
 
     # ---- 3. Trials near them ----
     try:
@@ -86,9 +106,12 @@ def personal_plan(case_id: int, db: Session = Depends(get_db),
 
     plan = {
         "country": country,
+        "plan_tier": family.plan_tier,
+        "audience_note": audience_note,
         "local_centres": local,
         "global_centres": intl,
         "schemes": [{"scheme_name": s.scheme_name, "coverage_limit": s.coverage_limit,
+                     "category": s.category,
                      "summary": (s.eligibility_criteria_json or {}).get("summary"),
                      **evaluate_scheme(s, profile)} for s in schemes],
         "scheme_results": scheme_results,
