@@ -26,11 +26,12 @@ FIELDS = ("NCTId,BriefTitle,OverallStatus,Condition,BriefSummary,"
           "LocationCity,LocationCountry,LocationFacility")
 
 
-def _live_ctg_search(cancer_type: str | None, biomarkers: list[str] | None) -> list[dict]:
+def _live_ctg_search(cancer_type: str | None, biomarkers: list[str] | None,
+                     country: str | None) -> list[dict]:
     params = {
         "query.cond": cancer_type or "cancer",
         "filter.overallStatus": "RECRUITING",
-        "pageSize": "10",
+        "pageSize": "20",
         "fields": FIELDS,
     }
     if biomarkers:
@@ -40,14 +41,15 @@ def _live_ctg_search(cancer_type: str | None, biomarkers: list[str] | None) -> l
     with urllib.request.urlopen(req, timeout=10) as resp:
         data = json.loads(resp.read().decode())
 
+    ctry = (country or "").lower()
     out = []
-    for study in data.get("studies", [])[:10]:
+    for study in data.get("studies", [])[:20]:
         p = study.get("protocolSection", {})
         ident = p.get("identificationModule", {})
         status = p.get("statusModule", {})
         locations = (p.get("contactsLocationsModule", {}) or {}).get("locations") or []
-        india_locs = [l for l in locations if str(l.get("country", "")).lower() == "india"]
-        shown = india_locs[:3] or locations[:3]
+        local = [l for l in locations if str(l.get("country", "")).lower() == ctry] if ctry else []
+        shown = local[:3] or locations[:3]
         loc_str = "; ".join(
             f"{l.get('facility', '?')} — {l.get('city', '')}, {l.get('country', '')}".strip(", ")
             for l in shown
@@ -62,10 +64,12 @@ def _live_ctg_search(cancer_type: str | None, biomarkers: list[str] | None) -> l
             "location": loc_str,
             "status": status.get("overallStatus") or "Unknown",
             "url": f"https://clinicaltrials.gov/study/{nct}" if nct else None,
-            "india_sites": len(india_locs),
+            "country_sites": len(local),
             "live": True,
             "placeholder": False,
         })
+    # Personalisation: studies with sites in the patient's country first.
+    out.sort(key=lambda s: -s["country_sites"])
     return out
 
 
@@ -88,7 +92,7 @@ def _seeded_examples(db: Session, cancer_type: str | None, biomarkers: list[str]
                 "location": trial.location,
                 "status": trial.status,
                 "url": trial.url,
-                "india_sites": 0,
+                "country_sites": 0,
                 "live": False,
                 "placeholder": True,
             })
@@ -96,18 +100,18 @@ def _seeded_examples(db: Session, cancer_type: str | None, biomarkers: list[str]
 
 
 def search_trials(db: Session, cancer_type: str | None, biomarkers: list[str] | None,
-                  include_live: bool = True) -> dict:
+                  include_live: bool = True, country: str | None = None) -> dict:
     results = []
     source_note = "seeded examples only"
     if include_live:
         try:
-            results = _live_ctg_search(cancer_type, biomarkers)
+            results = _live_ctg_search(cancer_type, biomarkers, country)
             if results:
-                source_note = "LIVE ClinicalTrials.gov results (recruiting studies)"
+                source_note = "LIVE ClinicalTrials.gov results (recruiting studies, worldwide)"
         except Exception:
             results = []
     if not results:
         results = _seeded_examples(db, cancer_type, biomarkers)
         source_note = ("Offline fallback: seeded example records "
                        "(CTRI has no public API; live search covers ClinicalTrials.gov)")
-    return {"results": results, "source_note": source_note}
+    return {"results": results[:10], "source_note": source_note}

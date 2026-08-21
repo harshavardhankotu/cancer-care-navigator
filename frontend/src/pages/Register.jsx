@@ -2,12 +2,14 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.jsx'
 import { DisclaimerBar, ErrorBox } from '../components/Layout.jsx'
+import { COUNTRIES } from '../countries.js'
 
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [country, setCountry] = useState('')
   const [consent, setConsent] = useState(false)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -15,7 +17,7 @@ export default function Register() {
   const submit = async (e) => {
     e.preventDefault()
     setBusy(true); setError(null)
-    try { await register(email, password); navigate('/') }
+    try { await register(email, password, country); navigate('/') }
     catch (err) { setError(err.message) }
     finally { setBusy(false) }
   }
@@ -29,6 +31,11 @@ export default function Register() {
           <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
         <div className="mb-2"><label className="label">Password (6+ characters)</label>
           <input className="input" type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+        <div className="mb-2"><label className="label">Your country (personalises centres &amp; schemes)</label>
+          <select className="input" value={country} onChange={(e) => setCountry(e.target.value)}>
+            <option value="">Prefer not to say</option>
+            {COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+          </select></div>
 
         <label className="flex gap-2 items-start text-xs text-slate-600 my-3 cursor-pointer">
           <input type="checkbox" className="mt-0.5" checked={consent} onChange={(e) => setConsent(e.target.checked)} required />

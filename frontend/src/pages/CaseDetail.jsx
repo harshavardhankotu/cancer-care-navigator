@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { ErrorBox } from '../components/Layout.jsx'
 import TimelineTab from './tabs/TimelineTab.jsx'
+import PlanTab from './tabs/PlanTab.jsx'
 import DocumentsTab from './tabs/DocumentsTab.jsx'
 import FlagsTab from './tabs/FlagsTab.jsx'
 import OpinionsTab from './tabs/OpinionsTab.jsx'
@@ -11,8 +12,9 @@ import LogisticsTab from './tabs/LogisticsTab.jsx'
 import FinanceTab from './tabs/FinanceTab.jsx'
 
 const TABS = [
+  ['plan', '⭐ My Plan'],
   ['timeline', 'Timeline'],
-  ['documents', 'Documents'],
+  ['documents', 'Records'],
   ['flags', 'Decision Flags'],
   ['opinions', 'Second Opinions'],
   ['trials', 'Trials'],
@@ -77,11 +79,12 @@ export default function CaseDetail() {
         ))}
       </div>
 
+      {tab === 'plan' && <PlanTab caseId={id} />}
       {tab === 'timeline' && <TimelineTab caseId={id} />}
       {tab === 'documents' && <DocumentsTab caseId={id} onChanged={load} />}
       {tab === 'flags' && <FlagsTab caseId={id} flags={flags} onChanged={load} />}
       {tab === 'opinions' && <OpinionsTab caseId={id} />}
-      {tab === 'trials' && <TrialsTab caseId={id} cancerType={caseData.cancer_type} />}
+      {tab === 'trials' && <TrialsTab caseId={id} cancerType={caseData.cancer_type} country={caseData.country || 'IN'} />}
       {tab === 'logistics' && <LogisticsTab caseId={id} />}
       {tab === 'finance' && <FinanceTab caseId={id} />}
     </div>

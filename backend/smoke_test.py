@@ -203,9 +203,44 @@ with client:
     corp = next(c for c in centers if "Apollo" in c["name"])
     check("corporate ownership recorded as neutral fact (no bonus)",
           corp["objective_score"]["breakdown"]["public_or_nonprofit_ownership"] == 0)
+
+    print("== global expansion ==")
+    us = [c for c in centers if c.get("country") == "US"]
+    check("global centres seeded (US present with NCI designation)",
+          len(us) >= 3 and any(
+              n["note_type"] == "designation" and "NCI-Designated Comprehensive" in n["detail"]
+              for c in us for n in c["notes"]))
+    mda = next(c for c in centers if "MD Anderson" in c["name"])
+    check("designation factor scores (MD Anderson gets +4 tier)",
+          mda["objective_score"]["breakdown"]["institutional_designation"] == 4)
+    gb = client.get("/api/centers", params={"country": "GB"}).json()
+    check("country filter works", 0 < len(gb) <= 3 and all(c["country"] == "GB" for c in gb))
     method = client.get("/api/centers/methodology").json()
-    check("methodology published with weights + self-check links",
-          bool(method["weights"]) and len(method["verify_any_hospital_yourself"]) >= 4)
+    check("methodology includes designation tiers + self-check links",
+          "institutional_designation" in method["weights"] and
+          bool(method.get("designation_tiers")) and
+          len(method["verify_any_hospital_yourself"]) >= 4)
+    schemes_us = client.get("/api/schemes", params={"country": "US"}).json()
+    check("schemes scoped by country", len(schemes_us) >= 3 and
+          all(s["scheme_name"].endswith("(US)") or "501(r)" in s["scheme_name"] or "Medicaid" in s["scheme_name"]
+              or "Medicare" in s["scheme_name"] or "ACA" in s["scheme_name"] for s in schemes_us))
+
+    print("== personalization: My Plan ==")
+    plan = client.get(f"/api/cases/{cid}/personal-plan", headers=auth(tok_a)).json()
+    check("plan returns country, centres, schemes, trials, questions",
+          plan["country"] == "IN" and isinstance(plan["local_centres"], list)
+          and isinstance(plan["schemes"], list) and isinstance(plan["trials"], list))
+    check("plan questions generated from open flags",
+          len(plan["questions_to_ask"]) >= 1 and plan["questions_to_ask"][0]["question"])
+    case_gb = client.post("/api/cases", headers=auth(tok_a), json={
+        "patient_name": "GB Patient", "cancer_type": "breast", "country": "GB"}).json()
+    client.put(f"/api/cases/{case_gb['id']}/financial-profile", headers=auth(tok_a),
+               json={"insurance_status": "uninsured", "income_bracket": "low"})
+    plan_gb = client.get(f"/api/cases/{case_gb['id']}/personal-plan", headers=auth(tok_a)).json()
+    check("plan respects case country (GB gets NHS)",
+          plan_gb["country"] == "GB" and
+          any("NHS" in s["scheme_name"] for s in plan_gb["schemes"]) and
+          all(s["status"] == "eligible" for s in plan_gb["schemes"]))
     exp = client.get("/api/me/export", headers=auth(tok_a)).json()
     check("DPDP right of access: full export works", len(exp["cases"]) >= 1)
     deleted = client.delete("/api/me", headers=auth(tok_b)).json()

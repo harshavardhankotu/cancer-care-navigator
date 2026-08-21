@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { ErrorBox } from '../components/Layout.jsx'
+import { COUNTRIES } from '../countries.js'
 
 const FACTOR_LABELS = {
   public_or_nonprofit_ownership: 'Public / non-profit ownership',
@@ -20,6 +21,7 @@ export default function Centers() {
   const [methodology, setMethodology] = useState(null)
   const [cancerType, setCancerType] = useState('')
   const [capability, setCapability] = useState('')
+  const [country, setCountry] = useState('')
   const [sort, setSort] = useState('score')
   const [error, setError] = useState(null)
 
@@ -32,6 +34,7 @@ export default function Centers() {
     const params = new URLSearchParams()
     if (cancerType) params.set('cancer_type', cancerType)
     if (capability) params.set('capability', capability)
+    if (country) params.set('country', country)
     params.set('sort', sort)
     api(`/centers?${params.toString()}`).then(setCenters).catch((e) => setError(e.message))
   }, [cancerType, capability, sort])
@@ -73,6 +76,11 @@ export default function Centers() {
       )}
 
       <div className="card mb-4 flex flex-wrap gap-2 items-end">
+        <div><label className="label">Country</label>
+          <select className="input" value={country} onChange={(e) => setCountry(e.target.value)}>
+            <option value="">🌍 All countries</option>
+            {COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+          </select></div>
         <div><label className="label">Cancer type</label>
           <input className="input" placeholder="e.g., breast" value={cancerType} onChange={(e) => setCancerType(e.target.value)} /></div>
         <div><label className="label">Capability</label>
@@ -100,6 +108,11 @@ export default function Centers() {
             )}
             <div className="font-semibold pr-20">{c.name}</div>
             <div className="text-sm text-slate-500">{c.location}</div>
+            {c.country && (
+              <span className="inline-block mt-1 text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 rounded px-1.5 py-0.5 uppercase">
+                {COUNTRIES.find(([code]) => code === c.country)?.[1] || c.country}
+              </span>
+            )}
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-slate-500">Score breakdown ({c.objective_score.total}/{c.objective_score.max})</summary>
               <table className="text-xs mt-1">

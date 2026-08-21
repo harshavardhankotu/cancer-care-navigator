@@ -55,10 +55,13 @@ def coverage_match(case_id: int, db: Session = Depends(get_db),
 
 
 @router.get("/schemes")
-def list_schemes(db: Session = Depends(get_db)):
+def list_schemes(country: str | None = None, db: Session = Depends(get_db)):
     schemes = db.query(CoverageScheme).all()
+    if country:
+        ctry = country.upper()
+        schemes = [s for s in schemes if (s.country or "").upper() == ctry]
     return [{
-        "id": s.id, "scheme_name": s.scheme_name,
+        "id": s.id, "scheme_name": s.scheme_name, "country": s.country,
         "eligibility_summary": (s.eligibility_criteria_json or {}).get("summary"),
         "covered_treatments": s.covered_treatments, "network_hospitals": s.network_hospitals,
         "coverage_limit": s.coverage_limit, "exclusions": s.exclusions,
@@ -81,9 +84,16 @@ def public_coverage_check(body: CoverageCheckIn, db: Session = Depends(get_db)):
     profile = {"insurance_status": body.insurance_status,
                "income_bracket": body.income_bracket,
                "employment": body.employment}
-    results = [evaluate_scheme(s, profile) for s in db.query(CoverageScheme).all()]
+    schemes = db.query(CoverageScheme).all()
+    if body.country:
+        ctry = body.country.upper()
+        schemes = [s for s in schemes if (s.country or "").upper() == ctry]
+    results = [evaluate_scheme(s, profile) for s in schemes]
+    results.sort(key=lambda r: {"eligible": 0, "needs_verification": 1, "not_eligible": 2}[r["status"]])
     return {
+        "country": (body.country or "").upper() or None,
         "results": results,
-        "disclaimer": DISCLAIMER + " Scheme parameters change; verify on official portals "
-                                   "(pmjay.gov.in, cghs.mohfw.gov.in) or at a hospital Ayushman desk.",
+        "disclaimer": DISCLAIMER + " Scheme parameters change; verify on the official portals "
+                                   "linked in this app. Eligibility is always confirmed by the "
+                                   "scheme itself, never by this tool.",
     }

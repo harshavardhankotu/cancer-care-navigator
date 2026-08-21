@@ -10,8 +10,9 @@ from .database import SessionLocal, engine, Base
 from .models import (CoverageScheme, Doctor, ForeclosureRule, HospitalNote,
                      PatientAssistanceProgram, SpecialistCenter, Trial)
 from .seed_data import (COVERAGE_SCHEMES, DOCTORS, FORECLOSURE_RULES,
-                        HOSPITAL_NOTES, PATIENT_ASSISTANCE_PROGRAMS,
-                        SPECIALIST_CENTERS, TRIALS)
+                        GLOBAL_PAPS, GLOBAL_SCHEMES, HOSPITAL_NOTES,
+                        PATIENT_ASSISTANCE_PROGRAMS, SPECIALIST_CENTERS,
+                        TRIALS, WORLD_CENTERS)
 
 
 def _seed(db: Session) -> None:
@@ -51,6 +52,26 @@ def _seed(db: Session) -> None:
             db.add(HospitalNote(center_id=center.id, note_type=n["note_type"],
                                 detail=n["detail"], source_name=n["source_name"],
                                 source_url=n["source_url"], as_of_date=_date.today()))
+
+    # Global expansion (v0.3) — insert once, detected by absence of non-IN rows
+    if db.query(SpecialistCenter).filter(SpecialistCenter.country != "IN").count() == 0:
+        for wc in WORLD_CENTERS:
+            row = {k: v for k, v in wc.items() if k != "notes"}
+            row["verified_by"] = "seed-starter-list (requires manual verification)"
+            row["last_verified_date"] = _date.today()
+            center = SpecialistCenter(**row)
+            db.add(center)
+            db.flush()
+            for n in wc.get("notes", []):
+                db.add(HospitalNote(center_id=center.id, as_of_date=_date.today(), **n))
+    if db.query(CoverageScheme).filter(CoverageScheme.country != "IN").count() == 0:
+        for s in GLOBAL_SCHEMES:
+            db.add(CoverageScheme(**s))
+    if db.query(PatientAssistanceProgram).filter(
+            PatientAssistanceProgram.manufacturer == "PAN Foundation").count() == 0:
+        for p in GLOBAL_PAPS:
+            db.add(PatientAssistanceProgram(**p))
+
     db.commit()
 
 

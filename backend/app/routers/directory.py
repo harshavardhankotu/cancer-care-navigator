@@ -16,16 +16,21 @@ router = APIRouter(prefix="/api", tags=["directory"])
 # ---- Transparent, fact-based comparison (NOT a quality rating) ----
 # Score = sum of verifiable public facts only. Full breakdown is returned with
 # every centre so patients can see exactly where each point comes from.
+# The "institutional_designation" factor is the closest citable proxy for a
+# centre's history/standing: designation programmes (e.g., NCI Comprehensive,
+# DKG CCC, national flagship institutes) publish their criteria and member lists.
 SCORE_WEIGHTS = {
     "public_or_nonprofit_ownership": 3,
     "national_accreditation_noted": 2,
     "scheme_empanelment_noted": 2,
     "capability_breadth": 3,  # scaled: 1-4 caps=1, 5-7=2, 8+=3
+    "institutional_designation": 4,
 }
 NOTE_TYPE_TO_FACTOR = {
     "ownership": "public_or_nonprofit_ownership",
     "accreditation": "national_accreditation_noted",
     "scheme_empanelment": "scheme_empanelment_noted",
+    "designation": "institutional_designation",
 }
 
 
@@ -34,6 +39,13 @@ def _is_public_nonprofit(detail: str) -> bool:
     return any(k in d for k in (
         "government", "public-funded", "public funded", "non-profit", "nonprofit",
         "charitable trust", "not-for-profit", "state-aided", "institute of national importance"))
+
+
+def _designation_points(detail: str) -> int:
+    """Tiered by how selective the programme is: NCI 'Comprehensive' is +4,
+    other national/designation programmes +3."""
+    full = SCORE_WEIGHTS["institutional_designation"]
+    return full if "comprehensive" in detail.lower() else full - 1
 
 
 def _score_center(center: SpecialistCenter, notes: list[HospitalNote]) -> dict:
@@ -46,6 +58,8 @@ def _score_center(center: SpecialistCenter, notes: list[HospitalNote]) -> dict:
             continue
         if n.note_type == "ownership" and _is_public_nonprofit(n.detail):
             breakdown[factor] = SCORE_WEIGHTS[factor]
+        elif n.note_type == "designation":
+            breakdown[factor] = _designation_points(n.detail)
         elif n.note_type in ("accreditation", "scheme_empanelment"):
             breakdown[factor] = SCORE_WEIGHTS[factor]
     total = sum(breakdown.values())
@@ -54,8 +68,12 @@ def _score_center(center: SpecialistCenter, notes: list[HospitalNote]) -> dict:
 
 @router.get("/centers")
 def list_centers(cancer_type: str | None = None, capability: str | None = None,
-                 sort: str = "score", db: Session = Depends(get_db)):
+                 country: str | None = None, sort: str = "score",
+                 db: Session = Depends(get_db)):
     centers = db.query(SpecialistCenter).all()
+    if country:
+        ctry = country.upper()
+        centers = [c for c in centers if (c.country or "").upper() == ctry]
     if cancer_type:
         ct = cancer_type.lower()
         centers = [c for c in centers if any(ct in t.lower() or t.lower() in ct
@@ -69,6 +87,7 @@ def list_centers(cancer_type: str | None = None, capability: str | None = None,
         notes = db.query(HospitalNote).filter(HospitalNote.center_id == c.id).all()
         out.append({
             **CenterOut.model_validate(c).model_dump(),
+            "country": c.country,
             "notes": [{
                 "note_type": n.note_type, "detail": n.detail,
                 "source_name": n.source_name, "source_url": n.source_url,
@@ -79,7 +98,7 @@ def list_centers(cancer_type: str | None = None, capability: str | None = None,
     if sort == "score":
         out.sort(key=lambda x: (-x["objective_score"]["total"], (x["name"] or "").lower()))
     else:
-        out.sort(key=lambda x: (x["name"] or "").lower())
+        out.sort(key=lambda x: ((x.get("country") or "").lower(), (x["name"] or "").lower()))
     return out
 
 
@@ -92,14 +111,21 @@ def ranking_methodology():
         "principles": [
             "We use ONLY objective, publicly citable facts — never user reviews, which are "
             "easy to buy and game.",
+            "'History & standing' is proxied by institutional designation programmes (NCI "
+            "Comprehensive Cancer Centers, DKG-certified CCCs, national flagship institutes) "
+            "whose criteria and member lists are published — not by anecdotes.",
             "This is NOT a quality ranking and NOT medical advice. A high score does not mean "
             "'best for your case' — that decision belongs to you and your treating doctors.",
             "Individual doctors are deliberately NOT scored. Doctor ratings invite gaming and "
             "legal risk; instead we show verifiable credential fields once curated.",
         ],
         "weights": SCORE_WEIGHTS,
+        "designation_tiers": {
+            "+4": "NCI-Designated COMPREHENSIVE Cancer Center (US NCI list)",
+            "+3": "Other national/designation programmes (DKG CCC, national institutes, OECI-accredited)",
+        },
         "what_we_cannot_measure": [
-            "Clinical outcomes per hospital (India has no public per-hospital cancer outcome data)",
+            "Clinical outcomes per hospital (no country publishes comparable per-hospital cancer outcomes)",
             "Doctor skill (deferred to NMC/state council registers during human curation)",
             "Your personal clinical situation",
         ],

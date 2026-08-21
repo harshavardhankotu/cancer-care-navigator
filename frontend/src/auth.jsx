@@ -17,12 +17,15 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const login = async (emailArg, password) => {
+  const login = async (emailArg, password, country) => {
     const r = await api('/auth/login', { method: 'POST', body: { email: emailArg, password } })
     setToken(r.token); setEmail(r.email)
   }
-  const register = async (emailArg, password) => {
-    const r = await api('/auth/register', { method: 'POST', body: { email: emailArg, password } })
+  const register = async (emailArg, password, country) => {
+    const r = await api('/auth/register', {
+      method: 'POST',
+      body: { email: emailArg, password, consent_accepted: true, country: country || null },
+    })
     setToken(r.token); setEmail(r.email)
   }
   const logout = () => { setToken(null); setEmail(null) }

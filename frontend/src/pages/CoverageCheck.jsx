@@ -1,13 +1,14 @@
 import React, { useState } from 'react'
 import { api } from '../api.js'
 import { DISCLAIMER, ErrorBox } from '../components/Layout.jsx'
+import { COUNTRIES } from '../countries.js'
 
 const INSURANCE = [['uninsured', 'Uninsured'], ['private_insured', 'Private insurance'], ['employer_group', 'Employer group cover'], ['government_scheme', 'Government scheme'], ['unknown', 'Not sure']]
 const INCOME = [['low', 'Low'], ['lower_middle', 'Lower middle'], ['middle', 'Middle'], ['upper_middle', 'Upper middle'], ['high', 'High'], ['unknown', 'Prefer not to say']]
-const EMPLOYMENT = [['central_government_employee', 'Central govt employee'], ['central_government_pensioner', 'Central govt pensioner'], ['state_government', 'State government'], ['private_sector', 'Private sector'], ['informal_sector', 'Informal / self-employed'], ['other', 'Other'], ['unknown', 'Prefer not to say']]
+const EMPLOYMENT = [['central_government_employee', 'Central govt employee'], ['central_government_pensioner', 'Central govt pensioner'], ['state_government', 'State government'], ['private_sector', 'Private sector'], ['informal_sector', 'Informal / self-employed'], ['retired_senior', 'Retired (65+)'], ['unemployed', 'Unemployed'], ['other', 'Other'], ['unknown', 'Prefer not to say']]
 
 export default function CoverageCheck() {
-  const [form, setForm] = useState({ insurance_status: 'uninsured', income_bracket: 'unknown', employment: 'unknown' })
+  const [form, setForm] = useState({ country: 'IN', insurance_status: 'uninsured', income_bracket: 'unknown', employment: 'unknown' })
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
 
@@ -21,11 +22,16 @@ export default function CoverageCheck() {
     <div className="max-w-3xl">
       <h1 className="text-xl font-bold mb-1">Quick coverage check</h1>
       <p className="text-xs text-slate-500 mb-3">
-        No case needed. Rules-based indicative check against seeded public scheme descriptions —
-        eligibility is always confirmed by the official scheme, never by this tool.
+        No case needed, anywhere in the world. Rules-based indicative check against seeded public
+        scheme descriptions for your country — eligibility is always confirmed by the official
+        scheme, never by this tool.
       </p>
       <ErrorBox error={error} />
-      <form onSubmit={submit} className="card mb-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+      <form onSubmit={submit} className="card mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+        <div><label className="label">Country *</label>
+          <select className="input" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} required>
+            {COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+          </select></div>
         <div><label className="label">Insurance status</label>
           <select className="input" value={form.insurance_status} onChange={(e) => setForm({ ...form, insurance_status: e.target.value })}>
             {INSURANCE.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -43,6 +49,17 @@ export default function CoverageCheck() {
 
       {result && (
         <>
+          {result.country && (
+            <p className="text-xs text-slate-500 mb-2">
+              Showing schemes seeded for <strong>{result.country}</strong>. Nothing you entered is stored.
+            </p>
+          )}
+          {result.results.length === 0 && (
+            <div className="card text-sm text-slate-500 mb-3">
+              No schemes seeded yet for this country — it's on our roadmap. Try the global links on the
+              Centres page ("verify ANY hospital yourself" list) and your country's health ministry.
+            </div>
+          )}
           {result.results.map((r) => (
             <div key={r.scheme_id} className={`card mb-2 border-l-4 ${r.status === 'eligible' ? 'border-l-green-500' : r.status === 'needs_verification' ? 'border-l-yellow-400' : 'border-l-slate-300'}`}>
               <div className="font-medium">{r.scheme_name}

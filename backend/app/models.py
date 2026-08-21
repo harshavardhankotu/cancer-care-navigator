@@ -14,6 +14,7 @@ class Family(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     consent_accepted: Mapped[bool] = mapped_column(Boolean, default=False)  # DPDP Act 2023
     consent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    country: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     cases = relationship("Case", back_populates="family")
@@ -30,6 +31,7 @@ class Case(Base):
     stage: Mapped[str | None] = mapped_column(String(100), nullable=True)
     diagnosis_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
     current_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    country: Mapped[str] = mapped_column(String(10), default="IN")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     family = relationship("Family", back_populates="cases")
@@ -131,6 +133,7 @@ class DecisionFlag(Base):
 class SpecialistCenter(Base):
     __tablename__ = "specialist_centers"
     id: Mapped[int] = mapped_column(primary_key=True)
+    country: Mapped[str] = mapped_column(String(10), default="IN", index=True)
     name: Mapped[str] = mapped_column(String(255))
     location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     capabilities: Mapped[list | None] = mapped_column(JSON, nullable=True)
@@ -195,6 +198,7 @@ class Trial(Base):
 class CoverageScheme(Base):
     __tablename__ = "coverage_schemes"
     id: Mapped[int] = mapped_column(primary_key=True)
+    country: Mapped[str] = mapped_column(String(10), default="IN", index=True)
     scheme_name: Mapped[str] = mapped_column(String(255))
     eligibility_criteria_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     covered_treatments: Mapped[list | None] = mapped_column(JSON, nullable=True)

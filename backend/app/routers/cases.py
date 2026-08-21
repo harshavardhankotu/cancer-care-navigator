@@ -29,7 +29,9 @@ def flag_out(db: Session, f: DecisionFlag) -> dict:
 @router.post("", response_model=CaseOut)
 def create_case(body: CaseCreate, db: Session = Depends(get_db),
                 family: Family = Depends(get_current_family)):
-    case = Case(family_id=family.id, **body.model_dump())
+    fields = body.model_dump()
+    fields["country"] = (fields.pop("country") or "").upper() or family.country or "IN"
+    case = Case(family_id=family.id, **fields)
     db.add(case)
     db.commit()
     db.refresh(case)

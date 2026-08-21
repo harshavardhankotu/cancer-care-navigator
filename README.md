@@ -1,10 +1,17 @@
-# Cancer Care Navigator (India) — MVP
+# Cancer Care Navigator — MVP (global)
 
-A case-management, decision-sequencing, and access-brokering platform for Indian cancer
-patients and families. **This is not a diagnostic AI tool.** It never generates treatment
+A case-management, decision-sequencing, and access-brokering platform for **cancer patients
+and families worldwide**. **This is not a diagnostic AI tool.** It never generates treatment
 recommendations. It organizes records, surfaces time-sensitive decision risks (sourced from
-published guidelines), and helps families run parallel second opinions and see financial /
-logistics options faster.
+published guidelines), ranks centres on citable public facts, matches country coverage
+schemes, prioritises in-country clinical trials, and helps families run parallel second
+opinions faster.
+
+**Now global:** 36+ seeded centres across 20+ countries, 17 public coverage schemes
+(NHS, Medicaid/Medicare/ACA, SUS, GKV, ALD-100%, NHI caps, NHIS cancer co-pay support,
+MediShield Life, PM-JAY & more), live worldwide trial search via ClinicalTrials.gov v2,
+and a personalised **"My Plan"** per case: best local centres → schemes you may qualify
+for → trials with sites in your country → questions to ask your oncologist → next steps.
 
 > **Persistent disclaimer shown on every page and every generated PDF:**
 > *"This is not medical advice. It organizes your records and flags questions to raise with
@@ -14,22 +21,18 @@ logistics options faster.
 
 ## 💰 Core principle: 100% FREE of cost
 
-Every layer of this project runs on free, open-source, or keyless-public services. **No paid
-APIs, no paid tiers required, ever.**
+Every layer runs on free, open-source, or keyless-public services. **No paid APIs, no paid tiers required.**
 
 | Layer | What we use | Cost |
 |---|---|---|
-| Backend framework | FastAPI + SQLAlchemy (open source) | ₹0 / $0 |
-| Database (dev) | SQLite file | $0 |
-| Database (prod) | [Neon](https://neon.tech) free tier — 3 GiB Postgres, scales to zero | $0 |
-| Hosting (prod) | [Render](https://render.com) free tier — 750 hrs/mo, Docker | $0 |
-| Frontend hosting (alt) | Vercel/Netlify hobby tier | $0 |
-| PDF generation | reportlab (open source) | $0 |
-| Document text extraction | pypdf reads digital-PDF text layers locally | $0 |
-| OCR for scanned files | Manual correction UI (cloud OCR is a later swap-in point) | $0 |
-| Clinical trial search | **ClinicalTrials.gov Data API v2 — public domain, NO API key** ([docs](https://clinicaltrials.gov/data-api/api)) | $0 |
-| Auth | Self-hosted JWT + PBKDF2 (no auth SaaS) | $0 |
-| File storage | Local disk / Render volume-shaped dir (S3 swap point kept) | $0 |
+| Backend framework | FastAPI + SQLAlchemy | $0 |
+| Database (dev / prod) | SQLite / [Neon](https://neon.tech) free Postgres | $0 |
+| Hosting | [Render](https://render.com) free tier (Docker, one process serves app+API) | $0 |
+| PDF generation | reportlab | $0 |
+| Document extraction | pypdf text-layer reading (local) | $0 |
+| Clinical trial search | ClinicalTrials.gov Data API v2 — public domain, no key | $0 |
+| Auth | Self-hosted JWT + PBKDF2 | $0 |
+| File storage | Local disk (S3-shaped swap point) | $0 |
 
 Known trade-offs of the free tiers (documented, accepted): Render cold-starts after ~15 min
 idle (~30–60 s wake-up); Neon compute pauses when idle; uploaded files on free deploys are

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { api } from '../../api.js'
 import { ErrorBox } from '../../components/Layout.jsx'
 
-export default function TrialsTab({ caseId, cancerType }) {
+export default function TrialsTab({ caseId, cancerType, country }) {
   const [biomarkers, setBiomarkers] = useState('')
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
@@ -13,6 +13,7 @@ export default function TrialsTab({ caseId, cancerType }) {
     try {
       const params = new URLSearchParams({ cancer_type: cancerType || '' })
       if (biomarkers) params.set('biomarkers', biomarkers)
+      if (country) params.set('country', country)
       params.set('live', 'true')
       setData(await api(`/trials/search?${params.toString()}`))
     } catch (err) { setError(err.message) }
@@ -43,17 +44,17 @@ export default function TrialsTab({ caseId, cancerType }) {
           {data.results.map((t) => (
             <div key={t.external_id || t.title} className="card mb-2">
               <div className="flex justify-between items-start gap-2">
-                <div>
-                  <span className="font-medium">{t.title}</span>
-                  {t.live
-                    ? <span className="ml-2 text-[10px] uppercase font-semibold bg-green-100 text-green-800 border border-green-300 rounded px-1.5 py-0.5">live registry data</span>
-                    : <span className="ml-2 text-[10px] uppercase font-semibold bg-amber-100 text-amber-800 border border-amber-300 rounded px-1.5 py-0.5">example data</span>}
-                  {t.india_sites > 0 && (
-                    <span className="ml-1 text-[10px] uppercase font-semibold bg-blue-100 text-blue-800 border border-blue-300 rounded px-1.5 py-0.5">
-                      {t.india_sites} India site{t.india_sites > 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
+              <div>
+                <span className="font-medium">{t.title}</span>
+                {t.live
+                  ? <span className="ml-2 text-[10px] uppercase font-semibold bg-green-100 text-green-800 border border-green-300 rounded px-1.5 py-0.5">live registry data</span>
+                  : <span className="ml-2 text-[10px] uppercase font-semibold bg-amber-100 text-amber-800 border border-amber-300 rounded px-1.5 py-0.5">example data</span>}
+                {t.country_sites > 0 && (
+                  <span className="ml-1 text-[10px] uppercase font-semibold bg-blue-100 text-blue-800 border border-blue-300 rounded px-1.5 py-0.5">
+                    {t.country_sites} site{t.country_sites > 1 ? 's' : ''} in {country}
+                  </span>
+                )}
+              </div>
                 <a href={t.url} target="_blank" rel="noreferrer" className="btn-secondary shrink-0 no-underline">{t.source} ↗</a>
               </div>
               <p className="text-xs text-slate-500 mt-1">

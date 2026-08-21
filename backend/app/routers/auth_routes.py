@@ -24,7 +24,8 @@ def register(body: FamilyCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")
     family = Family(email=body.email.lower(), password_hash=hash_password(body.password),
-                    consent_accepted=True, consent_at=datetime.utcnow())
+                    consent_accepted=True, consent_at=datetime.utcnow(),
+                    country=(body.country or "").upper() or None)
     db.add(family)
     db.commit()
     db.refresh(family)

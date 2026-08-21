@@ -8,6 +8,7 @@ class FamilyCreate(BaseModel):
     email: str
     password: str
     consent_accepted: bool = False  # DPDP Act 2023 — must be explicitly accepted
+    country: str | None = None
 
 
 class TokenOut(BaseModel):
@@ -23,6 +24,7 @@ class CaseCreate(BaseModel):
     stage: str | None = None
     diagnosis_date: date | None = None
     current_status: str | None = None
+    country: str | None = None
 
 
 class CaseUpdate(BaseModel):
@@ -33,6 +35,7 @@ class CaseUpdate(BaseModel):
     stage: str | None = None
     diagnosis_date: date | None = None
     current_status: str | None = None
+    country: str | None = None
 
 
 class CaseOut(BaseModel):
@@ -45,6 +48,7 @@ class CaseOut(BaseModel):
     stage: str | None
     diagnosis_date: date | None
     current_status: str | None
+    country: str | None = None
     created_at: datetime
 
 
@@ -146,6 +150,7 @@ class CenterOut(BaseModel):
     cancer_types: list[str] | None
     verified_by: str | None
     last_verified_date: date | None
+    country: str | None = None
 
 
 class WaitReportIn(BaseModel):
@@ -200,6 +205,7 @@ class FinProfileOut(FinProfileIn):
 
 
 class CoverageCheckIn(BaseModel):
+    country: str | None = None
     insurance_status: Literal[
         "uninsured", "private_insured", "employer_group",
         "government_scheme", "unknown"
@@ -209,5 +215,6 @@ class CoverageCheckIn(BaseModel):
     ] = "unknown"
     employment: Literal[
         "central_government_employee", "central_government_pensioner",
-        "state_government", "private_sector", "informal_sector", "other", "unknown"
+        "state_government", "private_sector", "informal_sector", "other",
+        "retired_senior", "unemployed", "unknown"
     ] = "unknown"

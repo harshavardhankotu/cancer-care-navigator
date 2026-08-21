@@ -10,7 +10,7 @@ from sqlalchemy import text
 from .config import BASE_DIR, DISCLAIMER, DATABASE_URL
 from .database import Base, SessionLocal, engine
 from .routers import (auth_routes, cases, directory, documents, finance,
-                      me, opinions, trials)
+                      me, opinions, plan, trials)
 from .seed import seed_if_empty
 
 FRONTEND_DIST = os.path.normpath(os.path.join(BASE_DIR, "..", "frontend", "dist"))
@@ -21,14 +21,18 @@ def _ensure_columns() -> None:
     if not DATABASE_URL.startswith("sqlite"):
         return
     with engine.begin() as conn:
-        pkg_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(case_packages)"))}
-        if "share_token" not in pkg_cols:
-            conn.execute(text("ALTER TABLE case_packages ADD COLUMN share_token VARCHAR(64)"))
-        fam_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(families)"))}
-        if "consent_accepted" not in fam_cols:
-            conn.execute(text("ALTER TABLE families ADD COLUMN consent_accepted BOOLEAN DEFAULT 0"))
-        if "consent_at" not in fam_cols:
-            conn.execute(text("ALTER TABLE families ADD COLUMN consent_at DATETIME"))
+        def add(table: str, column: str, ddl: str) -> None:
+            cols = {row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))}
+            if column not in cols:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
+
+        add("case_packages", "share_token", "VARCHAR(64)")
+        add("families", "consent_accepted", "BOOLEAN DEFAULT 0")
+        add("families", "consent_at", "DATETIME")
+        add("families", "country", "VARCHAR(10)")
+        add("cases", "country", "VARCHAR(10) DEFAULT 'IN'")
+        add("specialist_centers", "country", "VARCHAR(10) DEFAULT 'IN'")
+        add("coverage_schemes", "country", "VARCHAR(10) DEFAULT 'IN'")
 
 
 @asynccontextmanager
@@ -53,7 +57,7 @@ app.add_middleware(
 
 for router in (auth_routes.router, cases.router, documents.router,
                opinions.router, opinions.public_router, directory.router,
-               trials.router, finance.router, me.router):
+               trials.router, finance.router, me.router, plan.router):
     app.include_router(router)
 
 

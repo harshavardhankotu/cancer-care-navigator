@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api, downloadFile } from '../api.js'
 import { ErrorBox } from '../components/Layout.jsx'
 import { useAuth } from '../auth.jsx'
+import { COUNTRIES } from '../countries.js'
 
-const empty = { patient_name: '', cancer_type: '', patient_age: '', patient_sex: 'unknown', stage: '', diagnosis_date: '', current_status: '' }
+const empty = { patient_name: '', cancer_type: '', patient_age: '', patient_sex: 'unknown', stage: '', diagnosis_date: '', current_status: '', country: 'IN' }
 
 export default function Dashboard() {
   const [cases, setCases] = useState([])
@@ -64,6 +65,10 @@ export default function Dashboard() {
             </select></div>
           <div><label className="label">Stage</label><input className="input" placeholder="IIIB" value={form.stage} onChange={set('stage')} /></div>
           <div><label className="label">Diagnosis date</label><input className="input" type="date" value={form.diagnosis_date} onChange={set('diagnosis_date')} /></div>
+          <div><label className="label">Patient's country (personalises My Plan)</label>
+            <select className="input" value={form.country} onChange={set('country')}>
+              {COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+            </select></div>
           <div className="md:col-span-2"><label className="label">Current status / treatment plan (free text — drives decision-risk flags)</label>
             <textarea className="input" rows={2} value={form.current_status} onChange={set('current_status')} /></div>
           <div className="md:col-span-2 text-[11px] text-slate-400">
