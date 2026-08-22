@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from ..auth import get_current_family, owned_case
 from ..database import get_db
+from ..legal_notes import cross_border_notes_for
 from ..models import (CaseFinancialProfile, CoverageScheme, DecisionFlag,
                       Family, SpecialistCenter)
 from ..routers.directory import _score_center
@@ -115,6 +116,13 @@ def personal_plan(case_id: int, extended: bool = False,
                      "summary": (s.eligibility_criteria_json or {}).get("summary"),
                      **evaluate_scheme(s, profile)} for s in schemes],
         "scheme_results": scheme_results,
+        "options_abroad": {
+            "centres": intl[:4],
+            "notes": cross_border_notes_for(country),
+            "note": ("Participating in another country usually means travel + a medical visa "
+                     "and self-pay or special reimbursement. Always start with the destination "
+                     "hospital's international patient desk."),
+        },
         "trials": trials,
         "questions_to_ask": questions,
         "next_steps": [

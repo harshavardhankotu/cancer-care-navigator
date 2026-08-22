@@ -88,6 +88,32 @@ export default function PlanTab({ caseId }) {
       </section>
 
       <section className="card mb-4">
+        <h2 className="font-semibold mb-1">✈️ Treatment abroad (intercountry options)</h2>
+        <p className="text-xs text-slate-500 mb-2">{plan.options_abroad?.note}</p>
+        {(plan.options_abroad?.centres || []).length > 0 && (
+          <ul className="text-sm space-y-1 mb-3">
+            {plan.options_abroad.centres.map((c) => (
+              <li key={c.id} className="flex justify-between gap-2 border-b last:border-b-0 pb-1">
+                <span>
+                  {c.website ? (
+                    <a href={c.website} target="_blank" rel="noreferrer" className="text-blue-700 underline">{c.name} ↗</a>
+                  ) : c.name}
+                  <span className="text-slate-400"> · {c.country}</span>
+                </span>
+                <span className="text-xs font-bold shrink-0">{c.score}/{c.max_score}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {(plan.options_abroad?.notes || []).map((n, i) => (
+          <div key={i} className="text-xs bg-slate-50 border rounded p-2 mb-1">
+            <span className="font-semibold">{n.title}.</span> {n.detail}
+            {n.source_url && <> <a className="underline" href={n.source_url} target="_blank" rel="noreferrer">source ↗</a></>}
+          </div>
+        ))}
+      </section>
+
+      <section className="card mb-4">
         <h2 className="font-semibold mb-1">🧪 Recruiting trials (sites in {plan.country} first)</h2>
         {plan.trials.length === 0 && <p className="text-sm text-slate-500">No trials loaded — try the Trials tab.</p>}
         <ul className="text-sm space-y-2">

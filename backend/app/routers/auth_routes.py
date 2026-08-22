@@ -51,6 +51,8 @@ def register(body: FamilyCreate, request: Request, db: Session = Depends(get_db)
     db.add(family)
     db.commit()
     db.refresh(family)
+    from ..audit import audit
+    audit(family.id, "register")
     return TokenOut(token=create_token(family.id), email=family.email)
 
 
@@ -63,6 +65,8 @@ def login(body: FamilyCreate, request: Request, db: Session = Depends(get_db)):
                             detail="Too many attempts. Wait a few minutes and try again.")
     family = db.query(Family).filter(Family.email == email).first()
     if not family or not verify_password(body.password, family.password_hash):
+        from ..audit import audit
+        audit(None, "login_fail")
         raise HTTPException(status_code=401, detail="Invalid email or password")
     return TokenOut(token=create_token(family.id), email=family.email)
 

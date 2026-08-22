@@ -163,3 +163,43 @@ REGION_LEGAL_NOTES = {
 def notes_for_country(country_code: str | None) -> dict:
     key = REGIME_BY_COUNTRY.get((country_code or "").upper(), "GEN")
     return {"region_key": key, **REGION_LEGAL_NOTES[key]}
+
+
+# =====================================================================
+# CROSS-BORDER CARE (intercountry participation) — citable public rules
+# =====================================================================
+CROSS_BORDER_NOTES = [
+    {"applies_to": ["EU"], "title": "EU Cross-Border Healthcare Directive (2011/24/EU)",
+     "detail": "If you live in the EU, you can travel to another EU member state for private or public treatment and claim reimbursement from your home insurer/fund, up to what the same treatment costs at home. Prior authorisation is needed only in limited cases.",
+     "source_name": "ec.europa.eu - cross-border healthcare",
+     "source_url": "https://health.ec.europa.eu/cross-border-healthcare_en"},
+    {"applies_to": ["EU", "GB", "CH"], "title": "EHIC / GHIC - necessary care while abroad",
+     "detail": "The European Health Insurance Card (UK GHIC post-Brexit) covers state-provided medically necessary care during a temporary stay abroad at local terms - not planned treatment travel.",
+     "source_name": "europa.eu / nhs.uk", "source_url": "https://commission.europa.eu/travel-european-healthcard_en"},
+    {"applies_to": ["ALL"], "title": "Medical visa letter from destination hospital",
+     "detail": "Most countries require an invitation/medical letter from the treating hospital before issuing a medical visa. Ask the hospital's INTERNATIONAL PATIENT DESK for a written cost estimate AND the visa letter together.",
+     "source_name": "general practice guidance", "source_url": None},
+    {"applies_to": ["ALL"], "title": "Check reimbursement BEFORE booking travel",
+     "detail": "Ask your home insurer/scheme in writing: (1) will they reimburse treatment in country X? (2) up to what amount? (3) what documents do they need? Get answers by email so you have proof.",
+     "source_name": "general practice guidance", "source_url": None},
+    {"applies_to": ["IN"], "title": "India e-Medical Visa",
+     "detail": "Nationals of most countries can apply online for an e-Medical visa for treatment at recognised Indian hospitals; e-Medical Attendant visas are available for companions. Triple entry and 60-day stays are typical.",
+     "source_name": "indianvisaonline.gov.in", "source_url": "https://indianvisaonline.gov.in/evisa/tvoa.html"},
+    {"applies_to": ["GB"], "title": "NHS charging rules for overseas visitors (England)",
+     "detail": "Overseas visitors can be charged 150% of tariff for planned NHS secondary care; immediately necessary treatment is given first then billed, GP care stays free. Check exemptions before relying on NHS care.",
+     "source_name": "gov.uk - NHS overseas visitors", "source_url": "https://www.gov.uk/guidance/nhs-charging-for-overseas-visitors"},
+    {"applies_to": ["US"], "title": "US care as a non-resident",
+     "detail": "There is no public coverage for visitors; nonprofit-hospital charity care policies are generally limited to US residents. International patients negotiate package pricing via hospital international desks and typically pay upfront.",
+     "source_name": "general practice guidance", "source_url": None},
+]
+
+
+def cross_border_notes_for(country_code):
+    code = (country_code or "").upper()
+    regime = REGIME_BY_COUNTRY.get(code, "GEN")
+    out = []
+    for n in CROSS_BORDER_NOTES:
+        applies = n["applies_to"]
+        if "ALL" in applies or code in applies or regime in applies:
+            out.append(n)
+    return out

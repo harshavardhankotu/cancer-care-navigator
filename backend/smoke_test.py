@@ -344,4 +344,22 @@ with client:
     tata_left = [s for s in summary_after if "Tata" in s["center_name"]]
     check("user's crowdsourced reports erased with account", len(tata_left) == 0)
 
+    print("== intercountry + contacts + GDPR artifacts ==")
+    de = client.get("/api/legal/international-access", params={"country": "DE"}).json()
+    check("EU cross-border directive served for DE",
+          any("2011/24/EU" in n["title"] for n in de["for_your_country"]))
+    inn = client.get("/api/legal/international-access", params={"country": "IN"}).json()
+    check("India e-Medical visa note served", any("e-Medical" in n["title"] for n in inn["for_your_country"]))
+    check("general cross-border guidance present", len(de["general"]) >= 2)
+    centers_all = client.get("/api/centers").json()
+    with_site = [c for c in centers_all if c.get("website")]
+    check("official website contact published for 30+ centres", len(with_site) >= 30)
+    from app.database import SessionLocal as _SL2
+    from app.models import AuditLog as _AL
+    _db2 = _SL2()
+    actions = {a[0] for a in _db2.query(_AL.action).all()}
+    _db2.close()
+    needed = {"register", "login_fail", "export", "erase", "share_create", "share_revoke"}
+    check("audit trail records security events (GDPR Art.30/32)", needed.issubset(actions))
+
 print(f"\nALL {PASS} SMOKE CHECKS PASSED")

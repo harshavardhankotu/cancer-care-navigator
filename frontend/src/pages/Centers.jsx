@@ -108,11 +108,19 @@ export default function Centers() {
             )}
             <div className="font-semibold pr-20">{c.name}</div>
             <div className="text-sm text-slate-500">{c.location}</div>
-            {c.country && (
-              <span className="inline-block mt-1 text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 rounded px-1.5 py-0.5 uppercase">
-                {COUNTRIES.find(([code]) => code === c.country)?.[1] || c.country}
-              </span>
-            )}
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {c.country && (
+                <span className="text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 rounded px-1.5 py-0.5 uppercase">
+                  {COUNTRIES.find(([code]) => code === c.country)?.[1] || c.country}
+                </span>
+              )}
+              {c.website && (
+                <a href={c.website} target="_blank" rel="noreferrer"
+                   className="text-[10px] font-semibold text-blue-700 underline">
+                  Official site / contact ↗
+                </a>
+              )}
+            </div>
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-slate-500">Score breakdown ({c.objective_score.total}/{c.objective_score.max})</summary>
               <table className="text-xs mt-1">

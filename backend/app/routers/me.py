@@ -60,6 +60,8 @@ def _case_dict(db: Session, case: Case) -> dict:
 @router.get("/export")
 def export_my_data(db: Session = Depends(get_db), family=Depends(get_current_family)):
     cases = db.query(Case).filter(Case.family_id == family.id).all()
+    from ..audit import audit
+    audit(family.id, "export")
     return {
         "account": {"email": family.email, "created_at": family.created_at.isoformat(),
                     "consent_accepted": family.consent_accepted,
@@ -73,6 +75,7 @@ def export_my_data(db: Session = Depends(get_db), family=Depends(get_current_fam
 
 @router.delete("")
 def erase_me(db: Session = Depends(get_db), family=Depends(get_current_family)):
+    from ..audit import audit
     cases = db.query(Case).filter(Case.family_id == family.id).all()
     for case in cases:
         for doc in db.query(Document).filter(Document.case_id == case.id).all():
@@ -87,6 +90,7 @@ def erase_me(db: Session = Depends(get_db), family=Depends(get_current_family)):
         db.delete(case)
     # Crowdsourced wait-time reports are personal contributions too — erase them.
     db.query(WaitTimeReport).filter(WaitTimeReport.reported_by_family_id == family.id).delete()
+    audit(family.id, "erase", db=db)  # same transaction → no SQLite lock
     db.delete(family)
     db.commit()
     return {"deleted": True,

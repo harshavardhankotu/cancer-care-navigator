@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../../api.js'
 import { ErrorBox } from '../../components/Layout.jsx'
+import { COUNTRIES } from '../../countries.js'
 
 export default function TrialsTab({ caseId, cancerType, country }) {
   const [biomarkers, setBiomarkers] = useState('')
+  const [targetCountry, setTargetCountry] = useState(country || '')
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
 
@@ -13,13 +15,14 @@ export default function TrialsTab({ caseId, cancerType, country }) {
     try {
       const params = new URLSearchParams({ cancer_type: cancerType || '' })
       if (biomarkers) params.set('biomarkers', biomarkers)
-      if (country) params.set('country', country)
+      if (targetCountry) params.set('country', targetCountry)
       params.set('live', 'true')
       setData(await api(`/trials/search?${params.toString()}`))
     } catch (err) { setError(err.message) }
   }
 
-  useEffect(() => { search() }, [])
+  useEffect(() => { setTargetCountry(country || '') }, [country])
+  useEffect(() => { if (targetCountry !== undefined) search() }, [])
 
   return (
     <div>
@@ -45,6 +48,13 @@ export default function TrialsTab({ caseId, cancerType, country }) {
         <div><label className="label">Cancer type (from case)</label><input className="input" value={cancerType || ''} disabled /></div>
         <div><label className="label">Biomarkers (comma-separated)</label>
           <input className="input" placeholder="EGFR, ALK, HER2…" value={biomarkers} onChange={(e) => setBiomarkers(e.target.value)} /></div>
+        <div>
+          <label className="label">Prioritise sites in</label>
+          <select className="input" value={targetCountry} onChange={(e) => setTargetCountry(e.target.value)}>
+            <option value="">🌍 Anywhere (intercountry participation)</option>
+            {COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+          </select>
+        </div>
         <button className="btn-primary">Search</button>
       </form>
 
@@ -83,7 +93,7 @@ export default function TrialsTab({ caseId, cancerType, country }) {
                   </span>
                 )}
                 {t.enrollment > 0 && <span className="chip">~{t.enrollment.toLocaleString()} participants</span>}
-                {t.country_sites > 0 && <span className="chip !bg-blue-50 !border-blue-200">{t.country_sites} site(s) in {country}</span>}
+                {t.country_sites > 0 && <span className="chip !bg-blue-50 !border-blue-200">{t.country_sites} site(s) in {(targetCountry || country || 'selected country').toUpperCase()}</span>}
                 {t.sponsor && <span className="chip">Sponsor: {t.sponsor}</span>}
                 {(t.interventions || []).map((i) => <span key={i} className="chip">💊 {i}</span>)}
                 {t.min_age && t.min_age !== 'N/A' && <span className="chip">Age ≥ {t.min_age}</span>}

@@ -9,10 +9,11 @@ from sqlalchemy.orm import Session
 from .database import SessionLocal, engine, Base
 from .models import (CoverageScheme, Doctor, ForeclosureRule, HospitalNote,
                      PatientAssistanceProgram, SpecialistCenter, Trial)
-from .seed_data import (COVERAGE_SCHEMES, DOCTORS, FORECLOSURE_RULES,
-                        GLOBAL_PAPS, GLOBAL_SCHEMES, HIDDEN_SUBSIDY_SCHEMES,
-                        HOSPITAL_NOTES, PATIENT_ASSISTANCE_PROGRAMS,
-                        SPECIALIST_CENTERS, TRIALS, WORLD_CENTERS)
+from .seed_data import (CENTRE_WEBSITES, COVERAGE_SCHEMES, DOCTORS,
+                        FORECLOSURE_RULES, GLOBAL_PAPS, GLOBAL_SCHEMES,
+                        HIDDEN_SUBSIDY_SCHEMES, HOSPITAL_NOTES,
+                        PATIENT_ASSISTANCE_PROGRAMS, SPECIALIST_CENTERS,
+                        TRIALS, WORLD_CENTERS)
 
 
 def _seed(db: Session) -> None:
@@ -75,6 +76,14 @@ def _seed(db: Session) -> None:
             PatientAssistanceProgram.manufacturer == "PAN Foundation").count() == 0:
         for p in GLOBAL_PAPS:
             db.add(PatientAssistanceProgram(**p))
+
+    # Backfill official websites (contacts policy: official sites only)
+    if db.query(SpecialistCenter).filter(SpecialistCenter.website.is_(None)).count() > 0:
+        for c in db.query(SpecialistCenter).filter(SpecialistCenter.website.is_(None)).all():
+            url = CENTRE_WEBSITES.get(c.name)
+            if url:
+                c.website = url
+        db.commit()
 
     db.commit()
 

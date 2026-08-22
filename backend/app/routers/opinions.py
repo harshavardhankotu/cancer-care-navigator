@@ -218,6 +218,8 @@ def create_share_link(pkg_id: int, db: Session = Depends(get_db),
     if not pkg.share_token:
         pkg.share_token = secrets.token_urlsafe(24)
         db.commit()
+    from ..audit import audit
+    audit(family.id, "share_create", f"package:{pkg.id}")
     return {"share_path": f"/package/{pkg.id}/{pkg.share_token}",
             "note": "Anyone with this link can read this snapshot only. Revoke by "
                     "generating a fresh package version and not sharing the old link."}
@@ -233,6 +235,8 @@ def revoke_share_link(pkg_id: int, db: Session = Depends(get_db),
     owned_case(db, family, pkg.case_id)
     pkg.share_token = None
     db.commit()
+    from ..audit import audit
+    audit(family.id, "share_revoke", f"package:{pkg.id}")
     return {"revoked": True,
             "note": "The previous link no longer works. Create a new one anytime."}
 

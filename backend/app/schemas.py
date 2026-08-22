@@ -151,6 +151,7 @@ class CenterOut(BaseModel):
     verified_by: str | None
     last_verified_date: date | None
     country: str | None = None
+    website: str | None = None
 
 
 class WaitReportIn(BaseModel):

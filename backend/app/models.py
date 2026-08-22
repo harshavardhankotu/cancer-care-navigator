@@ -136,6 +136,7 @@ class SpecialistCenter(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     country: Mapped[str] = mapped_column(String(10), default="IN", index=True)
     name: Mapped[str] = mapped_column(String(255))
+    website: Mapped[str | None] = mapped_column(String(500), nullable=True)
     location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     capabilities: Mapped[list | None] = mapped_column(JSON, nullable=True)
     cancer_types: Mapped[list | None] = mapped_column(JSON, nullable=True)
@@ -230,3 +231,13 @@ class CaseFinancialProfile(Base):
     insurer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     income_bracket: Mapped[str | None] = mapped_column(String(100), nullable=True)
     budget_ceiling: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class AuditLog(Base):
+    """GDPR Art. 30/32 accountability trail — minimal, no PII beyond account id."""
+    __tablename__ = "audit_log"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    family_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    action: Mapped[str] = mapped_column(String(50), index=True)
+    detail: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
