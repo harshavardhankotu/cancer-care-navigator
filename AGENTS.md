@@ -25,3 +25,5 @@ cd ../frontend && npm run build
 3. Never fabricate real doctor contacts/rankings; centres = official sites only.
 4. Server-side family scoping on every data route; audit security-relevant events.
 5. No AI treatment recommendations / diagnosis / auto-dispatch — information brokering only.
+6. Loop/agent work: obey `.opencode/GUARDRAILS.md` — ingestion, matching, outreach
+   content and seed facts are human-reviewed zones; synthetic fixtures only.
