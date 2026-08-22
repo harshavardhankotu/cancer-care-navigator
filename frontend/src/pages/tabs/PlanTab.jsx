@@ -11,10 +11,25 @@ const STATUS_STYLE = {
 export default function PlanTab({ caseId }) {
   const [plan, setPlan] = useState(null)
   const [error, setError] = useState(null)
+  const [checkedSteps, setCheckedSteps] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(`ccn_plan_steps_${caseId}`) || '{}')
+    } catch {
+      return {}
+    }
+  })
 
   useEffect(() => {
     api(`/cases/${caseId}/personal-plan`).then(setPlan).catch((e) => setError(e.message))
   }, [caseId])
+
+  const toggleStep = (idx) => {
+    const updated = { ...checkedSteps, [idx]: !checkedSteps[idx] }
+    setCheckedSteps(updated)
+    try {
+      localStorage.setItem(`ccn_plan_steps_${caseId}`, JSON.stringify(updated))
+    } catch { /* storage full / disabled */ }
+  }
 
   if (error) return <ErrorBox error={error} />
   if (!plan) return <div className="text-slate-500">Building your personal plan…</div>
@@ -23,11 +38,23 @@ export default function PlanTab({ caseId }) {
 
   return (
     <div>
-      <p className="text-xs text-slate-500 mb-3">
-        Personalised for this case (country: <strong>{plan.country}</strong>) using public,
-        citable information only. Not medical advice — decisions rest with you and your doctors.
-        <span className="block mt-1 bg-blue-50 border border-blue-200 text-blue-900 rounded px-2 py-1">{plan.audience_note}</span>
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <p className="text-xs text-slate-500 max-w-xl">
+          Personalised for this case (country: <strong>{plan.country}</strong>) using public,
+          citable information only. Not medical advice — decisions rest with you and your doctors.
+        </p>
+        <button
+          className="btn-primary text-xs"
+          onClick={() => window.print()}
+          title="Print or save PDF of My Plan"
+        >
+          🖨️ Print / Save Plan
+        </button>
+      </div>
+
+      <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-900 rounded p-3 text-xs leading-relaxed">
+        <strong>Audience note:</strong> {plan.audience_note}
+      </div>
 
       <section className="card mb-4">
         <h2 className="font-semibold mb-1">🏥 Centres near you ({plan.country})</h2>
@@ -119,7 +146,7 @@ export default function PlanTab({ caseId }) {
         <ul className="text-sm space-y-2">
           {plan.trials.map((t) => (
             <li key={t.external_id || t.title}>
-              <a className="text-blue-700 underline" href={t.url} target="_blank" rel="noreferrer">{t.title} ↗</a>
+              <a className="text-blue-700 underline font-medium" href={t.url} target="_blank" rel="noreferrer">{t.title} ↗</a>
               <span className="block text-xs text-slate-500">
                 {t.external_id}{t.country_sites > 0 ? ` · ${t.country_sites} site(s) in ${plan.country}` : ''}{t.live ? ' · live registry data' : ' · example data'}
               </span>
@@ -134,7 +161,7 @@ export default function PlanTab({ caseId }) {
         <ol className="list-decimal ml-5 text-sm space-y-2">
           {plan.questions_to_ask.map((q, i) => (
             <li key={i}>
-              {q.question}
+              <div className="font-medium text-slate-800">{q.question}</div>
               {q.why_it_matters && <span className="block text-xs text-slate-500">Why it matters: {q.why_it_matters}</span>}
               {q.source && <span className="block text-xs text-slate-400">Source: {q.source}</span>}
             </li>
@@ -143,10 +170,21 @@ export default function PlanTab({ caseId }) {
       </section>
 
       <section className="card mb-4">
-        <h2 className="font-semibold mb-1">✅ Suggested next steps</h2>
-        <ol className="list-decimal ml-5 text-sm space-y-1">
-          {plan.next_steps.map((s, i) => <li key={i}>{s}</li>)}
-        </ol>
+        <h2 className="font-semibold mb-1">✅ Suggested next steps (interactive checklist)</h2>
+        <p className="text-xs text-slate-500 mb-2">Check off tasks as your family completes them:</p>
+        <div className="space-y-2 text-sm">
+          {plan.next_steps.map((s, i) => (
+            <label key={i} className={`flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors ${checkedSteps[i] ? 'bg-green-50 border-green-200 line-through text-slate-400' : 'border-slate-200 hover:bg-slate-50'}`}>
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                checked={!!checkedSteps[i]}
+                onChange={() => toggleStep(i)}
+              />
+              <span>{s}</span>
+            </label>
+          ))}
+        </div>
       </section>
 
       <div className="bg-amber-100 border border-amber-300 rounded p-3 text-xs text-amber-900">

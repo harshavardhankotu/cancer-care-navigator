@@ -35,6 +35,16 @@ export default function Dashboard() {
     } catch (err) { setError(err.message) }
   }
 
+  const deleteCase = async (e, caseId, patientName) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!window.confirm(`Permanently delete case "${patientName}" and all associated documents and packages?`)) return
+    try {
+      await api(`/cases/${caseId}`, { method: 'DELETE' })
+      load()
+    } catch (err) { setError(err.message) }
+  }
+
   const deleteAccount = async () => {
     if (!window.confirm('This permanently deletes your account, all cases, documents and files (DPDP right to erasure). Continue?')) return
     if (!window.confirm('Are you absolutely sure? This cannot be undone.')) return
@@ -86,20 +96,36 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {cases.map((c) => (
-          <Link key={c.id} to={`/cases/${c.id}`} className="card hover:shadow-md block">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="font-semibold">{c.patient_name}</div>
-                <div className="text-sm text-slate-600">{c.cancer_type}{c.stage ? ` · Stage ${c.stage}` : ''}</div>
-                <div className="text-xs text-slate-400 mt-1">{c.document_count} document(s)</div>
+          <div key={c.id} className="card hover:shadow-md transition-shadow relative flex flex-col justify-between">
+            <Link to={`/cases/${c.id}`} className="block">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-semibold text-slate-800 text-base">{c.patient_name}</div>
+                  <div className="text-sm text-slate-600">{c.cancer_type}{c.stage ? ` · Stage ${c.stage}` : ''}</div>
+                  <div className="text-xs text-slate-400 mt-1">
+                    {c.document_count} document(s) · {c.country || 'Global'}
+                  </div>
+                </div>
+                {c.open_flags > 0 && (
+                  <span className="bg-red-100 text-red-700 border border-red-200 rounded px-2 py-1 text-xs font-semibold">
+                    {c.open_flags} open flag{c.open_flags > 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
-              {c.open_flags > 0 && (
-                <span className="bg-red-100 text-red-700 border border-red-200 rounded px-2 py-1 text-xs font-semibold">
-                  {c.open_flags} open flag{c.open_flags > 1 ? 's' : ''}
-                </span>
-              )}
+            </Link>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+              <Link to={`/cases/${c.id}`} className="text-blue-600 font-medium hover:underline">
+                Open case file →
+              </Link>
+              <button
+                className="text-slate-400 hover:text-red-600 py-0.5 px-1.5 rounded transition-colors"
+                onClick={(e) => deleteCase(e, c.id, c.patient_name)}
+                title="Delete this case"
+              >
+                Delete case
+              </button>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 

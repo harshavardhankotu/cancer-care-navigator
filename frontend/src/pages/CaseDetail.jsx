@@ -86,7 +86,7 @@ export default function CaseDetail() {
       {tab === 'opinions' && <OpinionsTab caseId={id} />}
       {tab === 'trials' && <TrialsTab caseId={id} cancerType={caseData.cancer_type} country={caseData.country || 'IN'} />}
       {tab === 'logistics' && <LogisticsTab caseId={id} />}
-      {tab === 'finance' && <FinanceTab caseId={id} />}
+      {tab === 'finance' && <FinanceTab caseId={id} country={caseData.country || 'IN'} />}
     </div>
   )
 }

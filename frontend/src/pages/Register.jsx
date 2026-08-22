@@ -29,8 +29,8 @@ export default function Register() {
         <ErrorBox error={error} />
         <div className="mb-2"><label className="label">Email</label>
           <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-        <div className="mb-2"><label className="label">Password (6+ characters)</label>
-          <input className="input" type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+        <div className="mb-2"><label className="label">Password (8+ characters)</label>
+          <input className="input" type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
         <div className="mb-2"><label className="label">Your country (personalises centres &amp; schemes)</label>
           <select className="input" value={country} onChange={(e) => setCountry(e.target.value)}>
             <option value="">Prefer not to say</option>

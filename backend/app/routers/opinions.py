@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_family, owned_case
 from ..database import get_db
 from ..models import CasePackage, Doctor, Family, OpinionRequest
-from ..schemas import DoctorOut, OpinionAction, OpinionCreate, OpinionOut
+from ..schemas import DoctorOut, OpinionAction, OpinionCreate, OpinionOut, OpinionRespond
 from ..services.packages import create_package_version, render_case_pdf
 from ..services.sla import run_sla_check
 

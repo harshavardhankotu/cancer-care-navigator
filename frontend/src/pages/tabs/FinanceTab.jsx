@@ -5,12 +5,30 @@ import { ErrorBox } from '../../components/Layout.jsx'
 const INSURANCE = [['uninsured', 'Uninsured'], ['private_insured', 'Private insurance'], ['employer_group', 'Employer group cover'], ['government_scheme', 'Government scheme'], ['unknown', 'Not sure']]
 const INCOME = [['low', 'Low'], ['lower_middle', 'Lower middle'], ['middle', 'Middle'], ['upper_middle', 'Upper middle'], ['high', 'High'], ['unknown', 'Prefer not to say']]
 
-export default function FinanceTab({ caseId }) {
+const CURRENCY_MAP = {
+  IN: '₹ (INR)',
+  US: '$ (USD)',
+  GB: '£ (GBP)',
+  DE: '€ (EUR)',
+  FR: '€ (EUR)',
+  IT: '€ (EUR)',
+  ES: '€ (EUR)',
+  NL: '€ (EUR)',
+  CA: 'CA$ (CAD)',
+  AU: 'AU$ (AUD)',
+  SG: 'S$ (SGD)',
+  JP: '¥ (JPY)',
+  BR: 'R$ (BRL)',
+}
+
+export default function FinanceTab({ caseId, country = 'IN' }) {
   const [profile, setProfile] = useState({ insurance_status: 'unknown', insurer_name: '', income_bracket: 'unknown', budget_ceiling: '' })
   const [match, setMatch] = useState(null)
   const [schemes, setSchemes] = useState([])
   const [paps, setPaps] = useState([])
   const [error, setError] = useState(null)
+
+  const curr = CURRENCY_MAP[(country || 'IN').toUpperCase()] || 'Local currency'
 
   useEffect(() => {
     api(`/cases/${caseId}/financial-profile`).then((p) => p && setProfile({
@@ -19,9 +37,9 @@ export default function FinanceTab({ caseId }) {
       income_bracket: p.income_bracket || 'unknown',
       budget_ceiling: p.budget_ceiling ?? '',
     })).catch(() => {})
-    api('/schemes').then(setSchemes).catch(() => {})
+    api(`/schemes?country=${country || ''}`).then(setSchemes).catch(() => {})
     api('/assistance-programs').then(setPaps).catch(() => {})
-  }, [caseId])
+  }, [caseId, country])
 
   const save = async () => {
     setError(null)
@@ -57,7 +75,7 @@ export default function FinanceTab({ caseId }) {
             <select className="input" value={profile.income_bracket} onChange={(e) => setProfile({ ...profile, income_bracket: e.target.value })}>
               {INCOME.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select></div>
-          <div><label className="label">Budget ceiling (Rs.)</label>
+          <div><label className="label">Budget ceiling ({curr})</label>
             <input className="input" type="number" min="0" value={profile.budget_ceiling} onChange={(e) => setProfile({ ...profile, budget_ceiling: e.target.value })} /></div>
         </div>
         <button className="btn-primary mt-3" onClick={save}>Save & match coverage</button>

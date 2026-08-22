@@ -37,7 +37,7 @@ export default function Centers() {
     if (country) params.set('country', country)
     params.set('sort', sort)
     api(`/centers?${params.toString()}`).then(setCenters).catch((e) => setError(e.message))
-  }, [cancerType, capability, sort])
+  }, [cancerType, capability, country, sort])
 
   return (
     <div>

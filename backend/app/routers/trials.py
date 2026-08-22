@@ -11,10 +11,11 @@ router = APIRouter(prefix="/api/trials", tags=["trials"])
 
 @router.get("/search")
 def search(cancer_type: str | None = None, biomarkers: str | None = None,
+           country: str | None = None,
            live: bool = True, db: Session = Depends(get_db),
            family: Family = Depends(get_current_family)):
     bm_list = [b.strip() for b in (biomarkers or "").split(",") if b.strip()]
-    result = search_trials(db, cancer_type, bm_list, include_live=live)
+    result = search_trials(db, cancer_type, bm_list, include_live=live, country=country)
     result["disclaimer"] = ("Trial eligibility is decided by the trial team, not by this tool. "
                             "Discuss participation with your treating oncologist.")
     return result

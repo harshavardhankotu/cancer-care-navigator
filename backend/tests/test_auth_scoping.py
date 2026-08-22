@@ -62,3 +62,15 @@ def test_document_and_package_scoped(client, tokens):
     assert client.get(f"/api/documents/{doc['id']}/file", headers=_auth(tb)).status_code == 404
     pkg = client.post(f"/api/cases/{cid}/packages", headers=_auth(ta)).json()
     assert client.get(f"/api/packages/{pkg['id']}", headers=_auth(tb)).status_code == 404
+
+
+def test_case_deletion_scoped(client, tokens):
+    ta, tb = tokens
+    cid = client.post("/api/cases", headers=_auth(ta),
+                      json={"patient_name": "Z", "cancer_type": "lung"}).json()["id"]
+    # Other user cannot delete
+    assert client.delete(f"/api/cases/{cid}", headers=_auth(tb)).status_code == 404
+    # Owner can delete
+    assert client.delete(f"/api/cases/{cid}", headers=_auth(ta)).status_code == 200
+    # Confirm 404 after deletion
+    assert client.get(f"/api/cases/{cid}", headers=_auth(ta)).status_code == 404

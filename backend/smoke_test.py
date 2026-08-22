@@ -332,6 +332,23 @@ with client:
           all(s["status"] == "eligible" for s in plan_gb["schemes"]))
     exp = client.get("/api/me/export", headers=auth(tok_a)).json()
     check("DPDP right of access: full export works", len(exp["cases"]) >= 1)
+    print("== enhanced features: delete case, trials country, centers country ==")
+    del_case = client.post("/api/cases", headers=auth(tok_a), json={
+        "patient_name": "Temporary Case", "cancer_type": "Colon cancer", "country": "US"}).json()
+    del_cid = del_case["id"]
+    check("other family cannot delete case -> 404",
+          client.delete(f"/api/cases/{del_cid}", headers=auth(tok_b)).status_code == 404)
+    del_res = client.delete(f"/api/cases/{del_cid}", headers=auth(tok_a))
+    check("owner can delete individual case -> 200", del_res.status_code == 200 and del_res.json()["deleted"] is True)
+    check("deleted case cannot be fetched -> 404",
+          client.get(f"/api/cases/{del_cid}", headers=auth(tok_a)).status_code == 404)
+
+    trials_us = client.get("/api/trials/search", params={"cancer_type": "lung", "country": "US", "live": False}, headers=auth(tok_a))
+    check("trials search accepts country parameter", trials_us.status_code == 200 and "results" in trials_us.json())
+
+    centers_us = client.get("/api/centers", params={"country": "US"}).json()
+    check("centers filter by country returns only that country", all(c["country"] == "US" for c in centers_us) and len(centers_us) > 0)
+
     deleted = client.delete("/api/me", headers=auth(tok_b)).json()
     check("DPDP right to erasure: account deleted", deleted["deleted"] is True)
     check("deleted family cannot login",

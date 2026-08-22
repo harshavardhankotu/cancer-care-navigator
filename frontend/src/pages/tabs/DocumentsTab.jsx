@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { api } from '../../api.js'
+import { api, downloadFile } from '../../api.js'
 import { ErrorBox } from '../../components/Layout.jsx'
 
 export function ModeBadge({ doc }) {
@@ -16,6 +16,7 @@ export function ModeBadge({ doc }) {
 
 export default function DocumentsTab({ caseId, onChanged }) {
   const [docs, setDocs] = useState([])
+  const [search, setSearch] = useState('')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [showManual, setShowManual] = useState(false)
@@ -109,9 +110,32 @@ export default function DocumentsTab({ caseId, onChanged }) {
         </p>
       </form>
 
-      {docs.map((d) => (
-        <EditableDoc key={d.id} doc={d} onSave={saveDoc} onDelete={remove} />
-      ))}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="text-xs text-slate-500 font-medium">{docs.length} total record(s)</div>
+        {docs.length > 2 && (
+          <input
+            type="text"
+            className="input !w-64 text-xs py-1"
+            placeholder="🔍 Search records, findings, sources…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        )}
+      </div>
+
+      {docs
+        .filter((d) => {
+          if (!search.trim()) return true
+          const q = search.toLowerCase()
+          const type = (d.extracted_doc_type || '').toLowerCase()
+          const src = (d.extracted_source || '').toLowerCase()
+          const fn = (d.original_filename || '').toLowerCase()
+          const findings = (d.extracted_key_findings || []).join(' ').toLowerCase()
+          return type.includes(q) || src.includes(q) || fn.includes(q) || findings.includes(q)
+        })
+        .map((d) => (
+          <EditableDoc key={d.id} doc={d} onSave={saveDoc} onDelete={remove} />
+        ))}
     </div>
   )
 }
@@ -136,8 +160,8 @@ function EditableDoc({ doc, onSave, onDelete }) {
         </div>
         <div className="flex gap-2">
           {doc.has_file && (
-            <a className="btn-secondary no-underline" href={`/api/documents/${doc.id}/file`} target="_blank" rel="noreferrer"
-               onClick={(e) => { e.preventDefault(); fetchWithAuth(doc) }}>Download file</a>
+            <button className="btn-secondary no-underline"
+               onClick={() => downloadDoc(doc)}>Download file</button>
           )}
           <button className="btn-secondary" onClick={() => setEditing(!editing)}>{editing ? 'Close' : 'Correct fields'}</button>
           <button className="btn-danger" onClick={() => onDelete(doc)}>Delete</button>
@@ -173,8 +197,7 @@ function EditableDoc({ doc, onSave, onDelete }) {
   )
 }
 
-async function fetchWithAuth(doc) {
-  const { api, downloadFile } = await import('../../api.js')
+async function downloadDoc(doc) {
   try { await downloadFile(`/documents/${doc.id}/file`, doc.original_filename || 'document') }
   catch (e) { alert(e.message) }
 }

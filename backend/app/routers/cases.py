@@ -3,9 +3,11 @@ from sqlalchemy.orm import Session
 
 from ..auth import get_current_family, owned_case
 from ..database import get_db
-from ..models import Case, DecisionFlag, Family, ForeclosureRule
+from ..models import (Case, CaseFinancialProfile, CasePackage, DecisionFlag,
+                      Document, Family, ForeclosureRule, OpinionRequest, TransferRequest)
 from ..schemas import CaseCreate, CaseOut, CaseUpdate, FlagOut
 from ..services.rules_engine import evaluate_case
+from ..services.storage import delete_file
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
 
@@ -101,3 +103,22 @@ def acknowledge_flag(flag_id: int, db: Session = Depends(get_db),
     flag.acknowledged_at = datetime.utcnow()
     db.commit()
     return {"ok": True}
+
+
+@router.delete("/{case_id}")
+def delete_case(case_id: int, db: Session = Depends(get_db),
+                family: Family = Depends(get_current_family)):
+    case = owned_case(db, family, case_id)
+    # Remove files on disk
+    for doc in db.query(Document).filter(Document.case_id == case.id).all():
+        if doc.file_path:
+            delete_file(doc.file_path)
+        db.delete(doc)
+    db.query(DecisionFlag).filter(DecisionFlag.case_id == case.id).delete()
+    db.query(OpinionRequest).filter(OpinionRequest.case_id == case.id).delete()
+    db.query(CasePackage).filter(CasePackage.case_id == case.id).delete()
+    db.query(TransferRequest).filter(TransferRequest.case_id == case.id).delete()
+    db.query(CaseFinancialProfile).filter(CaseFinancialProfile.case_id == case.id).delete()
+    db.delete(case)
+    db.commit()
+    return {"deleted": True, "id": case_id}
