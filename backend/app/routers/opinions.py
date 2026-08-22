@@ -92,10 +92,19 @@ def update_opinion(opinion_id: int, body: OpinionAction, db: Session = Depends(g
         days = (req.doctor.avg_response_time_days or 7) + 2
         req.sla_deadline = req.sent_at + timedelta(days=days)
     elif body.action == "acknowledge":
+        if req.status != "sent":
+            raise HTTPException(status_code=400,
+                                detail="Only sent requests can be acknowledged")
         req.status = "acknowledged"
     elif body.action == "decline":
+        if req.status not in ("sent", "acknowledged"):
+            raise HTTPException(status_code=400,
+                                detail="Only sent or acknowledged requests can be declined")
         req.status = "declined"
     elif body.action == "no_response":
+        if req.status not in ("sent", "acknowledged"):
+            raise HTTPException(status_code=400,
+                                detail="Only sent or acknowledged requests can be marked no_response")
         req.status = "no_response"
     elif body.action == "respond":
         if req.status not in ("sent", "acknowledged", "no_response"):
