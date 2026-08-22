@@ -109,6 +109,7 @@ def acknowledge_flag(flag_id: int, db: Session = Depends(get_db),
 def delete_case(case_id: int, db: Session = Depends(get_db),
                 family: Family = Depends(get_current_family)):
     case = owned_case(db, family, case_id)
+    from ..audit import audit
     # Remove files on disk
     for doc in db.query(Document).filter(Document.case_id == case.id).all():
         if doc.file_path:
@@ -119,6 +120,7 @@ def delete_case(case_id: int, db: Session = Depends(get_db),
     db.query(CasePackage).filter(CasePackage.case_id == case.id).delete()
     db.query(TransferRequest).filter(TransferRequest.case_id == case.id).delete()
     db.query(CaseFinancialProfile).filter(CaseFinancialProfile.case_id == case.id).delete()
+    audit(family.id, "erase_case", f"case:{case.id}", db=db)  # same transaction
     db.delete(case)
     db.commit()
     return {"deleted": True, "id": case_id}
