@@ -92,7 +92,7 @@ No-account tools: **Quick coverage check** and **Centres directory** work withou
 ```powershell
 cd backend
 python smoke_test.py          # 85 end-to-end checks across all features & use cases
-python -m pytest tests -q     # 15 authorization-scoping & state machine tests
+python -m pytest tests -q     # 19 authorization-scoping, state-machine & patient journey tests
 ```
 
 How we test: `smoke_test.py` runs the full app **in a sandboxed in-process harness**

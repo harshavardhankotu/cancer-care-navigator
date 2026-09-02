@@ -47,6 +47,30 @@ export default function OpinionsTab({ caseId }) {
     <div>
       <ErrorBox error={error} />
 
+      <div className="card mb-4 bg-blue-50/50 border-blue-200">
+        <h3 className="font-semibold text-blue-900 text-sm mb-1">
+          💡 How Second Opinions Work in Cancer Care Navigator
+        </h3>
+        <p className="text-xs text-blue-950 leading-relaxed mb-2">
+          Seeking a second opinion before major irreversible treatment (surgery, radiation, first-line chemo) is standard oncology practice.
+          To get a fast, credible opinion:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-700">
+          <div className="bg-white p-2 rounded border border-blue-100">
+            <strong>1. Pack your records</strong>
+            <p className="text-slate-500 mt-0.5">Upload biopsy reports, scans, and notes in the Records tab.</p>
+          </div>
+          <div className="bg-white p-2 rounded border border-blue-100">
+            <strong>2. Create snapshot package</strong>
+            <p className="text-slate-500 mt-0.5">Generate an immutable PDF snapshot that doctors can review without logging in.</p>
+          </div>
+          <div className="bg-white p-2 rounded border border-blue-100">
+            <strong>3. Reach out in parallel</strong>
+            <p className="text-slate-500 mt-0.5">Consult 2–3 specialists simultaneously to prevent multi-week sequential delays.</p>
+          </div>
+        </div>
+      </div>
+
       <section className="card mb-4">
         <h2 className="font-semibold mb-1">1. Select doctors for parallel second opinions</h2>
         <p className="text-xs text-slate-500 mb-3">

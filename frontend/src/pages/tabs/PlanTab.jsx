@@ -56,6 +56,76 @@ export default function PlanTab({ caseId }) {
         <strong>Audience note:</strong> {plan.audience_note}
       </div>
 
+      {/* 1. Journey Triage: Needs Attention & In Progress */}
+      {((plan.needs_attention || []).length > 0 || (plan.in_progress || []).length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          {(plan.needs_attention || []).length > 0 && (
+            <div className="card border-l-4 border-l-red-500 bg-red-50/40">
+              <h3 className="font-semibold text-red-900 text-sm flex items-center gap-1 mb-2">
+                ⚠️ Needs Attention ({plan.needs_attention.length})
+              </h3>
+              <div className="space-y-2">
+                {plan.needs_attention.map((item, i) => (
+                  <div key={i} className="text-xs bg-white border border-red-200 rounded p-2 shadow-sm">
+                    <div className="font-medium text-red-950">{item.title}</div>
+                    <div className="text-slate-600 mt-0.5">{item.action}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(plan.in_progress || []).length > 0 && (
+            <div className="card border-l-4 border-l-blue-500 bg-blue-50/40">
+              <h3 className="font-semibold text-blue-900 text-sm flex items-center gap-1 mb-2">
+                ⏳ In Progress ({plan.in_progress.length})
+              </h3>
+              <div className="space-y-2">
+                {plan.in_progress.map((item, i) => (
+                  <div key={i} className="text-xs bg-white border border-blue-200 rounded p-2 shadow-sm">
+                    <div className="font-medium text-blue-950">{item.title}</div>
+                    <div className="text-slate-600 mt-0.5">{item.detail}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 2. Diagnostic & Second-Opinion Readiness */}
+      {plan.record_readiness && (
+        <div className="card mb-4 bg-slate-50 border-slate-200">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Case Readiness & Record Coverage</h3>
+            <span className="text-xs text-slate-500">{plan.record_readiness.total_documents} document(s) on timeline</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className={`p-2 rounded border flex items-center gap-1.5 ${plan.record_readiness.has_pathology ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+              <span>{plan.record_readiness.has_pathology ? '✅' : '⚠️'}</span>
+              <span>Pathology / Biopsy</span>
+            </div>
+            <div className={`p-2 rounded border flex items-center gap-1.5 ${plan.record_readiness.has_imaging ? 'bg-green-50 border-green-200 text-green-800' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
+              <span>{plan.record_readiness.has_imaging ? '✅' : '⚪'}</span>
+              <span>Scans (CT/PET/MRI)</span>
+            </div>
+            <div className={`p-2 rounded border flex items-center gap-1.5 ${plan.record_readiness.has_labs ? 'bg-green-50 border-green-200 text-green-800' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
+              <span>{plan.record_readiness.has_labs ? '✅' : '⚪'}</span>
+              <span>Lab / Blood Reports</span>
+            </div>
+            <div className={`p-2 rounded border flex items-center gap-1.5 ${plan.second_opinion_readiness?.has_package ? 'bg-green-50 border-green-200 text-green-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
+              <span>{plan.second_opinion_readiness?.has_package ? '✅' : '📋'}</span>
+              <span>Case Package</span>
+            </div>
+          </div>
+          {plan.record_readiness.has_unconfirmed_dates && (
+            <p className="text-[11px] text-amber-700 mt-2">
+              ⚠️ Some timeline records have unconfirmed dates — check the Records tab to verify report dates.
+            </p>
+          )}
+        </div>
+      )}
+
       <section className="card mb-4">
         <h2 className="font-semibold mb-1">🏥 Centres near you ({plan.country})</h2>
         <p className="text-xs text-slate-500 mb-2">Ranked by objective public facts — see the Centres page for the full breakdown.</p>

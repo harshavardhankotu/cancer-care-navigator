@@ -42,14 +42,19 @@ def add_manual_record(case_id: int, body: ManualRecord, db: Session = Depends(ge
     if not any([body.extracted_date, body.extracted_source, body.extracted_doc_type,
                 body.key_findings]):
         raise HTTPException(status_code=400, detail="Enter at least one field")
+    parsed_date = _parse_date(body.extracted_date)
     doc = Document(
         case_id=case.id,
         file_path=None,
-        extracted_date=_parse_date(body.extracted_date) or date.today(),
+        extracted_date=parsed_date,
         extracted_source=body.extracted_source or "Not recorded",
         extracted_doc_type=body.extracted_doc_type or "Note / record",
         extracted_key_findings=[f for f in (body.key_findings or []) if f.strip()],
-        raw_extraction_json={"ocr_engine": "manual", "extraction_mode": "manual"},
+        raw_extraction_json={
+            "ocr_engine": "manual",
+            "extraction_mode": "manual",
+            "date_unconfirmed": parsed_date is None,
+        },
     )
     db.add(doc)
     db.commit()

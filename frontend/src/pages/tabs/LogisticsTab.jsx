@@ -85,6 +85,74 @@ export default function LogisticsTab({ caseId }) {
         ))}
         {transfers.length === 0 && <p className="text-sm text-slate-500">No transfer requests yet.</p>}
       </section>
+
+      <section className="card mt-4">
+        <h2 className="font-semibold mb-1">📦 Essential Records Checklist for Hospital Transfer & Travel</h2>
+        <p className="text-xs text-slate-500 mb-3">
+          Oncologists at receiving hospitals almost always require primary physical materials — not just paper summaries.
+          Check off physical materials as you pack them:
+        </p>
+        <TransferPackingList caseId={caseId} />
+      </section>
+    </div>
+  )
+}
+
+function TransferPackingList({ caseId }) {
+  const [checked, setChecked] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(`ccn_transfer_pack_${caseId}`) || '{}')
+    } catch {
+      return {}
+    }
+  })
+
+  const toggle = (idx) => {
+    const updated = { ...checked, [idx]: !checked[idx] }
+    setChecked(updated)
+    try {
+      localStorage.setItem(`ccn_transfer_pack_${caseId}`, JSON.stringify(updated))
+    } catch { /* storage full / disabled */ }
+  }
+
+  const items = [
+    { label: 'Original biopsy / pathology glass slides & FFPE tissue blocks', note: 'Receiving hospital will re-read slides in their own pathology lab' },
+    { label: 'Raw imaging scans on DICOM optical disc (CD/DVD) or flash drive', note: 'Paper reports are not enough; radiologists need the 3D DICOM slices' },
+    { label: 'Complete histopathology, IHC, and molecular/biomarker reports', note: 'EGFR, ALK, HER2, BRCA, PD-L1, NGS panels where applicable' },
+    { label: 'Operative & surgical notes', note: 'Required if any prior biopsy, lumpectomy, or resection was performed' },
+    { label: 'Chemotherapy / radiation flow sheets', note: 'Must state exact drug regimens, doses in mg/m², cycle dates, and cumulative radiation dose' },
+    { label: 'Hospital discharge summaries', note: 'All inpatient stays related to oncologic care or complications' },
+    { label: 'Recent blood work (last 14–30 days)', note: 'Complete blood count (CBC), liver function (LFT), kidney function (KFT/eGFR)' },
+    { label: 'Government photo ID & health scheme / insurance card', note: 'Required for hospital registration, admission, and subsidy claim desks' },
+    { label: 'Travel concessions & accommodation arranged', note: 'e.g. Indian Railways cancer concession certificate / hospital dharmashala / guest house' },
+  ]
+
+  const doneCount = Object.values(checked).filter(Boolean).length
+
+  return (
+    <div>
+      <div className="text-xs text-slate-600 mb-2 font-medium">
+        Prepared: {doneCount} of {items.length} items
+      </div>
+      <div className="space-y-2 text-sm">
+        {items.map((it, idx) => (
+          <label
+            key={idx}
+            className={`flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors ${checked[idx] ? 'bg-green-50/70 border-green-200 line-through text-slate-400' : 'border-slate-200 hover:bg-slate-50'}`}
+          >
+            <input
+              type="checkbox"
+              className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+              checked={!!checked[idx]}
+              onChange={() => toggle(idx)}
+            />
+            <div>
+              <div className="font-medium text-slate-800">{it.label}</div>
+              <div className="text-xs text-slate-500">{it.note}</div>
+            </div>
+          </label>
+        ))}
+      </div>
     </div>
   )
 }
