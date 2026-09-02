@@ -9,13 +9,20 @@ const empty = { patient_name: '', cancer_type: '', patient_age: '', patient_sex:
 
 export default function Dashboard() {
   const [cases, setCases] = useState([])
+  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(empty)
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
   const { email, logout } = useAuth()
 
-  const load = () => api('/cases').then(setCases).catch((e) => setError(e.message))
+  const load = () => {
+    setLoading(true)
+    api('/cases')
+      .then(setCases)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }
   useEffect(() => { load() }, [])
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
@@ -90,7 +97,11 @@ export default function Dashboard() {
         </form>
       )}
 
-      {cases.length === 0 && !showForm && (
+      {loading && !showForm && (
+        <div className="card text-slate-500 text-sm animate-pulse">Loading your cases…</div>
+      )}
+
+      {!loading && cases.length === 0 && !showForm && (
         <div className="card text-slate-500 text-sm">No cases yet. Click “+ New case” to create one.</div>
       )}
 

@@ -19,8 +19,19 @@ export async function api(path, { method = 'GET', body, formData } = {}) {
   }
   if (!res.ok) {
     let msg = `Request failed (${res.status})`
-    try { msg = (await res.json()).detail || msg } catch { /* keep default */ }
-    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg))
+    try {
+      const data = await res.json()
+      if (data && data.detail) {
+        if (Array.isArray(data.detail)) {
+          msg = data.detail.map((d) => d.msg || (d.loc ? `${d.loc.slice(-1)[0]}: ${d.msg}` : JSON.stringify(d))).join('; ')
+        } else if (typeof data.detail === 'string') {
+          msg = data.detail
+        } else {
+          msg = JSON.stringify(data.detail)
+        }
+      }
+    } catch { /* keep default */ }
+    throw new Error(msg)
   }
   if (res.status === 204) return null
   const ct = res.headers.get('content-type') || ''

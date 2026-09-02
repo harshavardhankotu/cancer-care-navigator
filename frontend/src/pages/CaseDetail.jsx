@@ -69,10 +69,12 @@ export default function CaseDetail() {
         </div>
       )}
 
-      <div className="flex gap-1 mb-4 flex-wrap border-b border-slate-200 pb-1">
+      <div role="tablist" aria-label="Case sections" className="flex gap-1 mb-4 flex-wrap border-b border-slate-200 pb-1">
         {TABS.map(([key, label]) => (
           <button key={key}
-            className={`px-3 py-1.5 rounded-t text-sm ${tab === key ? 'bg-white font-semibold border border-b-0 border-slate-200' : 'text-slate-500 hover:bg-slate-200'}`}
+            role="tab"
+            aria-selected={tab === key}
+            className={`px-3 py-1.5 rounded-t text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${tab === key ? 'bg-white font-semibold border border-b-0 border-slate-200' : 'text-slate-500 hover:bg-slate-200'}`}
             onClick={() => setTab(key)}>
             {label}{key === 'flags' && openFlags.length > 0 ? ` (${openFlags.length})` : ''}
           </button>
