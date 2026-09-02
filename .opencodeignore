@@ -1,0 +1,20 @@
+# Protect medical records, uploaded files, and runtime DB from autonomous tools / LLM agents
+backend/app.db
+backend/storage/**
+*.db
+*.sqlite
+*.sqlite3
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.dcm
+*.dicom
+.env
+.env.*
+!.env.example
+frontend/node_modules/**
+frontend/dist/**
+.venv/**
+__pycache__/**
+*.pyc
