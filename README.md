@@ -91,15 +91,16 @@ No-account tools: **Quick coverage check** and **Centres directory** work withou
 
 ```powershell
 cd backend
-python smoke_test.py          # 85 end-to-end checks across all features & use cases
-python -m pytest tests -q     # 19 authorization-scoping, state-machine & patient journey tests
+python smoke_test.py          # 85 end-to-end checks across all features (83 passed offline + 2 live-registry skipped)
+python -m pytest tests -q     # 22 authorization-scoping, state-machine & synthetic patient journey tests
 ```
 
 How we test: `smoke_test.py` runs the full app **in a sandboxed in-process harness**
 (fastapi TestClient) against a throwaway database — every run starts from scratch, so results
-are deterministic and nothing touches real data. `pytest` covers authorization scoping and the
-opinion request state machine on isolated temp DBs. We also boot the real uvicorn server and
-probe endpoints over HTTP.
+are deterministic and nothing touches real data. When offline, live trial registry checks
+are gracefully skipped (83 passed / 85 checks total). `pytest` covers authorization scoping, the
+opinion request state machine, and 7 end-to-end synthetic patient journeys on isolated temp DBs.
+We also boot the real uvicorn server and probe endpoints over HTTP.
 
 ## 🔒 Security & privacy posture (audited)
 
@@ -126,6 +127,18 @@ Implemented controls:
 Honest limits (fix before scale): in-memory rate limiting is per-process (add Redis with
 multiple workers); tokens stay valid until expiry (72 h) with no server-side revocation list;
 free-tier file storage is ephemeral; legal pages are templates needing qualified lawyer sign-off.
+
+---
+
+## 🚦 Staging & Pilot Readiness Status
+
+- **Engineering Readiness: PASS** — 22 pytest unit/integration/journey tests pass, 85 smoke checks pass (83 in offline/sandboxed mode), zero-warning Vite frontend build.
+- **Product Readiness: PASS** — Core journeys (new diagnosis, scattered records, second opinions, transfer packing, financial matching) are coherent, deterministic, and state-aware.
+- **Clinical Readiness: REQUIRES QUALIFIED CLINICAL REVIEW** — Guideline foreclosure rules and clinical sequencing questions must be signed off by a licensed medical oncologist.
+- **Legal/Privacy Readiness: REQUIRES QUALIFIED LEGAL REVIEW** — DPDP/GDPR templates, consent text, and cross-border notes require formal qualified legal and DPIA counsel review.
+- **Directory Verification: REQUIRES HUMAN CURATION** — Specialist directory entries are placeholders requiring verified clinic coordinator contacts before public outreach.
+
+> **Recommendation**: **Engineering-ready for controlled staging / human-reviewed pilot.** Production readiness must NOT be declared until human clinical and legal sign-offs are completed.
 
 ---
 

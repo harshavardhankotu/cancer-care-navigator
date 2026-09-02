@@ -87,10 +87,10 @@ export default function LogisticsTab({ caseId }) {
       </section>
 
       <section className="card mt-4">
-        <h2 className="font-semibold mb-1">📦 Essential Records Checklist for Hospital Transfer & Travel</h2>
+        <h2 className="font-semibold mb-1">📦 Records Checklist for Hospital Transfer & Travel</h2>
         <p className="text-xs text-slate-500 mb-3">
-          Oncologists at receiving hospitals almost always require primary physical materials — not just paper summaries.
-          Check off physical materials as you pack them:
+          Administrative preparation checklist: Items you may want to confirm with the receiving centre prior to travel.
+          The receiving hospital's specific instructions always take precedence.
         </p>
         <TransferPackingList caseId={caseId} />
       </section>
@@ -116,15 +116,15 @@ function TransferPackingList({ caseId }) {
   }
 
   const items = [
-    { label: 'Original biopsy / pathology glass slides & FFPE tissue blocks', note: 'Receiving hospital will re-read slides in their own pathology lab' },
-    { label: 'Raw imaging scans on DICOM optical disc (CD/DVD) or flash drive', note: 'Paper reports are not enough; radiologists need the 3D DICOM slices' },
+    { label: 'Original biopsy / pathology glass slides & FFPE tissue blocks', note: 'Confirm if the receiving pathology lab requests physical material for re-reading' },
+    { label: 'Raw imaging scans on DICOM optical disc (CD/DVD) or flash drive', note: 'Check if receiving radiologists require raw DICOM slices or secure cloud transfer' },
     { label: 'Complete histopathology, IHC, and molecular/biomarker reports', note: 'EGFR, ALK, HER2, BRCA, PD-L1, NGS panels where applicable' },
-    { label: 'Operative & surgical notes', note: 'Required if any prior biopsy, lumpectomy, or resection was performed' },
-    { label: 'Chemotherapy / radiation flow sheets', note: 'Must state exact drug regimens, doses in mg/m², cycle dates, and cumulative radiation dose' },
-    { label: 'Hospital discharge summaries', note: 'All inpatient stays related to oncologic care or complications' },
+    { label: 'Operative & surgical notes', note: 'Helpful if any prior biopsy or resection surgery was performed' },
+    { label: 'Chemotherapy / radiation flow sheets', note: 'Summarizes prior regimens, doses in mg/m², cycle dates, and cumulative radiation' },
+    { label: 'Hospital discharge summaries', note: 'Prior inpatient admissions related to oncology care' },
     { label: 'Recent blood work (last 14–30 days)', note: 'Complete blood count (CBC), liver function (LFT), kidney function (KFT/eGFR)' },
-    { label: 'Government photo ID & health scheme / insurance card', note: 'Required for hospital registration, admission, and subsidy claim desks' },
-    { label: 'Travel concessions & accommodation arranged', note: 'e.g. Indian Railways cancer concession certificate / hospital dharmashala / guest house' },
+    { label: 'Government photo ID & health scheme / insurance card', note: 'Required for hospital registration and scheme desk verification' },
+    { label: 'Travel concessions & accommodation arranged', note: 'e.g. Travel concession forms / hospital patient guest house confirmation' },
   ]
 
   const doneCount = Object.values(checked).filter(Boolean).length

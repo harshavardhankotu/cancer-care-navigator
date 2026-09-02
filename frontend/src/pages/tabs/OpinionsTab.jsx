@@ -52,21 +52,21 @@ export default function OpinionsTab({ caseId }) {
           💡 How Second Opinions Work in Cancer Care Navigator
         </h3>
         <p className="text-xs text-blue-950 leading-relaxed mb-2">
-          Seeking a second opinion before major irreversible treatment (surgery, radiation, first-line chemo) is standard oncology practice.
-          To get a fast, credible opinion:
+          Seeking a second opinion before finalizing a treatment plan is a standard, respected part of oncology care.
+          To organize an efficient consultation:
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-700">
           <div className="bg-white p-2 rounded border border-blue-100">
-            <strong>1. Pack your records</strong>
-            <p className="text-slate-500 mt-0.5">Upload biopsy reports, scans, and notes in the Records tab.</p>
+            <strong>1. Assemble records</strong>
+            <p className="text-slate-500 mt-0.5">Upload pathology, scans, and clinical notes in the Records tab.</p>
           </div>
           <div className="bg-white p-2 rounded border border-blue-100">
             <strong>2. Create snapshot package</strong>
-            <p className="text-slate-500 mt-0.5">Generate an immutable PDF snapshot that doctors can review without logging in.</p>
+            <p className="text-slate-500 mt-0.5">Compile an immutable PDF snapshot that doctors can review securely.</p>
           </div>
           <div className="bg-white p-2 rounded border border-blue-100">
             <strong>3. Reach out in parallel</strong>
-            <p className="text-slate-500 mt-0.5">Consult 2–3 specialists simultaneously to prevent multi-week sequential delays.</p>
+            <p className="text-slate-500 mt-0.5">Contact 2–3 specialists simultaneously to help reduce avoidable administrative delays.</p>
           </div>
         </div>
       </div>

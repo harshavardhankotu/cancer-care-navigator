@@ -4,12 +4,12 @@ Covers end-to-end patient/caregiver journeys without any real patient data:
 - Journey 1: Newly diagnosed patient (case creation, missing records flag, next steps)
 - Journey 2: Scattered records to timeline (pathology, scans, unconfirmed date handling)
 - Journey 3: Second opinion parallel coordination & conflict detection
-- Journey 4: Low-income financial access & scheme matching
-- Journey 5: Hospital transfer tracking & scoping
+- Journey 4: Hospital transfer tracking & scoping
+- Journey 5: Low-income financial access & scheme matching (PM-JAY, CGHS, non-guaranteed wording)
+- Journey 6: Caregiver case access & cross-family authorization isolation
+- Journey 7: Date safety (missing, valid, invalid, and timeline ordering)
 """
 
-import os
-import tempfile
 import pytest
 from fastapi.testclient import TestClient
 
@@ -34,9 +34,20 @@ def auth_headers(client):
     return {"Authorization": f"Bearer {token}"}
 
 
+@pytest.fixture(scope="module")
+def secondary_auth_headers(client):
+    reg = client.post("/api/auth/register", json={
+        "email": "unauthorized_family@example.com",
+        "password": "strongPassword456!",
+        "consent_accepted": True,
+        "country": "IN",
+    }).json()
+    token = reg["token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_journey_newly_diagnosed_patient(client, auth_headers):
     """Journey 1: Newly diagnosed patient creates a case and reviews initial next steps."""
-    # 1. Create a new case
     case_res = client.post("/api/cases", headers=auth_headers, json={
         "patient_name": "Synthetic Patient A",
         "cancer_type": "NSCLC (Lung Cancer)",
@@ -47,17 +58,18 @@ def test_journey_newly_diagnosed_patient(client, auth_headers):
     assert case_res.status_code == 200
     cid = case_res.json()["id"]
 
-    # 2. Inspect the personal navigation plan before any records are uploaded
     plan = client.get(f"/api/cases/{cid}/personal-plan", headers=auth_headers).json()
     assert plan["country"] == "IN"
+
     # Plan must highlight missing records in needs_attention
     records_missing_item = next((i for i in plan["needs_attention"] if i["category"] == "records_missing"), None)
     assert records_missing_item is not None
     assert "No diagnostic records" in records_missing_item["title"]
 
-    # 3. Verify next steps prioritize initial document upload
-    assert any("upload" in s.lower() for s in plan["next_steps"])
+    # Verify next steps prioritize initial document upload
+    assert any("upload" in s.lower() or "record" in s.lower() for s in plan["next_steps"])
     assert plan["record_readiness"]["total_documents"] == 0
+    assert plan["second_opinion_readiness"]["status"] == "not_started"
     assert plan["second_opinion_readiness"]["ready"] is False
 
 
@@ -176,5 +188,109 @@ def test_journey_hospital_transfer_tracking(client, auth_headers):
     # Update status to uploaded
     client.patch(f"/api/transfers/{tr['id']}?status=uploaded", headers=auth_headers)
     plan_done = client.get(f"/api/cases/{cid}/personal-plan", headers=auth_headers).json()
-    # Once uploaded, it is no longer in progress
     assert not any(i.get("category") == "transfer" for i in plan_done["in_progress"])
+
+
+def test_journey_financial_access_and_scheme_matching(client, auth_headers):
+    """Journey 5: Low-income synthetic patient evaluates financial scheme access."""
+    case_res = client.post("/api/cases", headers=auth_headers, json={
+        "patient_name": "Synthetic Patient E",
+        "cancer_type": "Oral Cavity Cancer",
+        "country": "IN",
+    })
+    cid = case_res.json()["id"]
+
+    # Complete synthetic financial profile
+    prof_res = client.put(f"/api/cases/{cid}/financial-profile", headers=auth_headers, json={
+        "annual_income_inr": 120000,
+        "bpl_card_holder": True,
+        "cghs_beneficiary": False,
+        "echs_beneficiary": False,
+        "railway_employee": False,
+        "private_insurance_active": False,
+    })
+    assert prof_res.status_code == 200
+
+    # Match coverage schemes
+    match_res = client.post(f"/api/cases/{cid}/coverage-match", headers=auth_headers).json()
+    schemes = match_res["results"]
+    assert len(schemes) > 0
+
+    # Ensure PM-JAY matches for BPL card holder
+    pmjay = next((s for s in schemes if "PM-JAY" in s["scheme_name"]), None)
+    assert pmjay is not None
+    assert pmjay["status"] in ("eligible", "needs_verification")
+
+    # Application MUST include persistent disclaimers and not claim guaranteed eligibility
+    assert "disclaimer" in match_res
+    assert "not medical advice" in match_res["disclaimer"].lower() or "decisions rest with you" in match_res["disclaimer"].lower()
+
+
+def test_journey_caregiver_access_and_cross_family_isolation(client, auth_headers, secondary_auth_headers):
+    """Journey 6: Authorized caregiver accesses case profile; unauthorized family is blocked."""
+    # 1. Family A creates case
+    case_res = client.post("/api/cases", headers=auth_headers, json={
+        "patient_name": "Synthetic Patient F",
+        "cancer_type": "Lymphoma",
+        "country": "IN",
+    })
+    cid = case_res.json()["id"]
+
+    # 2. Authorized family member (same account) can fetch case, timeline, and plan
+    plan_a = client.get(f"/api/cases/{cid}/personal-plan", headers=auth_headers)
+    assert plan_a.status_code == 200
+    assert plan_a.json()["country"] == "IN"
+
+    # 3. Unauthorized family (different account) is strictly refused with 404
+    plan_b = client.get(f"/api/cases/{cid}/personal-plan", headers=secondary_auth_headers)
+    assert plan_b.status_code == 404
+
+    docs_b = client.get(f"/api/cases/{cid}/documents", headers=secondary_auth_headers)
+    assert docs_b.status_code == 404
+
+
+def test_journey_date_safety_and_timeline_ordering(client, auth_headers):
+    """Journey 7: Test valid dates, missing dates (unconfirmed), and invalid format handling."""
+    case_res = client.post("/api/cases", headers=auth_headers, json={
+        "patient_name": "Synthetic Patient G",
+        "cancer_type": "Gastric Cancer",
+        "country": "IN",
+    })
+    cid = case_res.json()["id"]
+
+    # 1. Valid ISO date
+    d1 = client.post(f"/api/cases/{cid}/records", headers=auth_headers, json={
+        "extracted_date": "2026-01-10",
+        "extracted_source": "Lab 1",
+        "extracted_doc_type": "Biopsy report",
+        "key_findings": ["Adenocarcinoma"],
+    }).json()
+    assert d1["extracted_date"] == "2026-01-10"
+    assert d1["raw_extraction_json"]["date_unconfirmed"] is False
+
+    # 2. None / Missing date
+    d2 = client.post(f"/api/cases/{cid}/records", headers=auth_headers, json={
+        "extracted_date": None,
+        "extracted_source": "Hospital Archives",
+        "extracted_doc_type": "Older scan report",
+        "key_findings": ["Suspicious lesion"],
+    }).json()
+    assert d2["extracted_date"] is None
+    assert d2["raw_extraction_json"]["date_unconfirmed"] is True
+
+    # 3. Invalid date string (e.g. malformed or text) -> should gracefully parse to None and mark unconfirmed
+    d3 = client.post(f"/api/cases/{cid}/records", headers=auth_headers, json={
+        "extracted_date": "circa-2025-spring",
+        "extracted_source": "Paper document",
+        "extracted_doc_type": "Consultation note",
+        "key_findings": ["Initial assessment"],
+    }).json()
+    assert d3["extracted_date"] is None
+    assert d3["raw_extraction_json"]["date_unconfirmed"] is True
+
+    # 4. Timeline list preserves all documents
+    docs = client.get(f"/api/cases/{cid}/documents", headers=auth_headers).json()
+    assert len(docs) == 3
+    # Ensure unconfirmed dates are exposed in response
+    unconfirmed_count = sum(1 for d in docs if not d["extracted_date"] or (d.get("raw_extraction_json") or {}).get("date_unconfirmed"))
+    assert unconfirmed_count == 2

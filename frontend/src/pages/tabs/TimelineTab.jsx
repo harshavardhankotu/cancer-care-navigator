@@ -16,10 +16,10 @@ export default function TimelineTab({ caseId }) {
   const filteredDocs = docs.filter((d) => {
     const type = (d.extracted_doc_type || '').toLowerCase()
     if (category !== 'all') {
-      if (category === 'pathology' && !type.includes('patholog') && !type.includes('biopsy')) return false
-      if (category === 'imaging' && !type.includes('imaging') && !type.includes('scan') && !type.includes('mri') && !type.includes('ct') && !type.includes('pet')) return false
-      if (category === 'lab' && !type.includes('lab') && !type.includes('blood') && !type.includes('marker')) return false
-      if (category === 'note' && (type.includes('patholog') || type.includes('imaging') || type.includes('lab'))) return false
+      if (category === 'pathology' && !type.includes('patholog') && !type.includes('biopsy') && !type.includes('histol')) return false
+      if (category === 'imaging' && !type.includes('imaging') && !type.includes('scan') && !type.includes('mri') && !type.includes('ct') && !type.includes('pet') && !type.includes('x-ray') && !type.includes('ultrasound')) return false
+      if (category === 'lab' && !type.includes('lab') && !type.includes('blood') && !type.includes('marker') && !type.includes('cbc') && !type.includes('biochem')) return false
+      if (category === 'note' && (type.includes('patholog') || type.includes('imaging') || type.includes('lab') || type.includes('biopsy') || type.includes('scan'))) return false
     }
     if (!search.trim()) return true
     const q = search.toLowerCase()
@@ -32,8 +32,8 @@ export default function TimelineTab({ caseId }) {
   const groups = {}
   for (const d of filteredDocs) {
     const isUnconfirmed = !d.extracted_date || !!d.raw_extraction_json?.date_unconfirmed
-    const dt = d.extracted_date || d.uploaded_at.slice(0, 10)
-    const key = isUnconfirmed ? `${dt} (Upload date)` : dt
+    const dt = d.extracted_date || (d.uploaded_at ? d.uploaded_at.slice(0, 10) : 'Unknown date')
+    const key = isUnconfirmed ? `${dt} (Upload date — unconfirmed)` : dt
     ;(groups[key] = groups[key] || []).push(d)
   }
   const sorted = Object.entries(groups).sort((a, b) => (a[0] < b[0] ? 1 : -1))

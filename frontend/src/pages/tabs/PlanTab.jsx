@@ -57,41 +57,43 @@ export default function PlanTab({ caseId }) {
       </div>
 
       {/* 1. Journey Triage: Needs Attention & In Progress */}
-      {((plan.needs_attention || []).length > 0 || (plan.in_progress || []).length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-          {(plan.needs_attention || []).length > 0 && (
-            <div className="card border-l-4 border-l-red-500 bg-red-50/40">
-              <h3 className="font-semibold text-red-900 text-sm flex items-center gap-1 mb-2">
-                ⚠️ Needs Attention ({plan.needs_attention.length})
-              </h3>
-              <div className="space-y-2">
-                {plan.needs_attention.map((item, i) => (
-                  <div key={i} className="text-xs bg-white border border-red-200 rounded p-2 shadow-sm">
-                    <div className="font-medium text-red-950">{item.title}</div>
-                    <div className="text-slate-600 mt-0.5">{item.action}</div>
-                  </div>
-                ))}
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        <div className="card border-l-4 border-l-amber-500 bg-amber-50/30">
+          <h3 className="font-semibold text-amber-950 text-sm flex items-center gap-1.5 mb-2">
+            ⚠️ Needs Attention ({(plan.needs_attention || []).length})
+          </h3>
+          {(plan.needs_attention || []).length > 0 ? (
+            <div className="space-y-2">
+              {plan.needs_attention.map((item, i) => (
+                <div key={i} className="text-xs bg-white border border-amber-200 rounded p-2.5 shadow-sm">
+                  <div className="font-medium text-slate-900">{item.title}</div>
+                  <div className="text-slate-600 mt-1">{item.action}</div>
+                </div>
+              ))}
             </div>
-          )}
-
-          {(plan.in_progress || []).length > 0 && (
-            <div className="card border-l-4 border-l-blue-500 bg-blue-50/40">
-              <h3 className="font-semibold text-blue-900 text-sm flex items-center gap-1 mb-2">
-                ⏳ In Progress ({plan.in_progress.length})
-              </h3>
-              <div className="space-y-2">
-                {plan.in_progress.map((item, i) => (
-                  <div key={i} className="text-xs bg-white border border-blue-200 rounded p-2 shadow-sm">
-                    <div className="font-medium text-blue-950">{item.title}</div>
-                    <div className="text-slate-600 mt-0.5">{item.detail}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          ) : (
+            <p className="text-xs text-slate-500 italic">No urgent sequencing flags or missing baseline records identified right now.</p>
           )}
         </div>
-      )}
+
+        <div className="card border-l-4 border-l-blue-500 bg-blue-50/30">
+          <h3 className="font-semibold text-blue-950 text-sm flex items-center gap-1.5 mb-2">
+            ⏳ In Progress ({(plan.in_progress || []).length})
+          </h3>
+          {(plan.in_progress || []).length > 0 ? (
+            <div className="space-y-2">
+              {plan.in_progress.map((item, i) => (
+                <div key={i} className="text-xs bg-white border border-blue-200 rounded p-2.5 shadow-sm">
+                  <div className="font-medium text-slate-900">{item.title}</div>
+                  <div className="text-slate-600 mt-1">{item.detail}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 italic">No active specialist requests or hospital transfers in progress.</p>
+          )}
+        </div>
+      </div>
 
       {/* 2. Diagnostic & Second-Opinion Readiness */}
       {plan.record_readiness && (
@@ -240,20 +242,38 @@ export default function PlanTab({ caseId }) {
       </section>
 
       <section className="card mb-4">
-        <h2 className="font-semibold mb-1">✅ Suggested next steps (interactive checklist)</h2>
-        <p className="text-xs text-slate-500 mb-2">Check off tasks as your family completes them:</p>
+        <h2 className="font-semibold mb-1">✅ Prioritized Next Steps ({(plan.action_steps || plan.next_steps).length})</h2>
+        <p className="text-xs text-slate-500 mb-2">Focused, state-specific actions for your current stage of navigation:</p>
         <div className="space-y-2 text-sm">
-          {plan.next_steps.map((s, i) => (
-            <label key={i} className={`flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors ${checkedSteps[i] ? 'bg-green-50 border-green-200 line-through text-slate-400' : 'border-slate-200 hover:bg-slate-50'}`}>
-              <input
-                type="checkbox"
-                className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                checked={!!checkedSteps[i]}
-                onChange={() => toggleStep(i)}
-              />
-              <span>{s}</span>
-            </label>
-          ))}
+          {(plan.action_steps || plan.next_steps).map((step, i) => {
+            const isObj = typeof step === 'object' && step !== null
+            const title = isObj ? step.title : step.split(':')[0]
+            const text = isObj ? step.explanation : (step.includes(':') ? step.slice(step.indexOf(':') + 1).trim() : step)
+            const reason = isObj ? step.reason : ''
+            const tab = isObj ? step.tab : ''
+            return (
+              <label key={i} className={`flex items-start gap-2.5 p-2.5 rounded border cursor-pointer transition-colors ${checkedSteps[i] ? 'bg-green-50 border-green-200 line-through text-slate-400' : 'border-slate-200 hover:bg-slate-50'}`}>
+                <input
+                  type="checkbox"
+                  className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                  checked={!!checkedSteps[i]}
+                  onChange={() => toggleStep(i)}
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-900">{title}</span>
+                    {tab && (
+                      <span className="text-[10px] uppercase font-semibold tracking-wider bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
+                        {tab}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-600 mt-0.5">{text}</div>
+                  {reason && <div className="text-[11px] text-slate-400 mt-0.5 italic">Why: {reason}</div>}
+                </div>
+              </label>
+            )
+          })}
         </div>
       </section>
 
