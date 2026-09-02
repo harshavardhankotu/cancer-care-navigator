@@ -91,15 +91,15 @@ No-account tools: **Quick coverage check** and **Centres directory** work withou
 
 ```powershell
 cd backend
-python smoke_test.py          # 75 end-to-end checks across all features & use cases
-python -m pytest tests -q     # authorization-scoping tests
+python smoke_test.py          # 85 end-to-end checks across all features & use cases
+python -m pytest tests -q     # 15 authorization-scoping & state machine tests
 ```
 
 How we test: `smoke_test.py` runs the full app **in a sandboxed in-process harness**
 (fastapi TestClient) against a throwaway database — every run starts from scratch, so results
-are deterministic and nothing touches real data. `pytest` covers authorization scoping on
-isolated temp DBs. We also boot the real uvicorn server and probe endpoints over HTTP.
-Not yet covered: browser-level E2E (Playwright) — on the roadmap.
+are deterministic and nothing touches real data. `pytest` covers authorization scoping and the
+opinion request state machine on isolated temp DBs. We also boot the real uvicorn server and
+probe endpoints over HTTP.
 
 ## 🔒 Security & privacy posture (audited)
 
@@ -108,20 +108,24 @@ Implemented controls:
   (per IP+email, 429 after burst) and signup caps per network; common/short passwords rejected.
 - **Authorization**: every case/document/package route re-verifies family ownership server-side
   (uniform 404s so records can't be probed); share links are token-gated and **revocable**.
-- **Uploads**: type + size enforced *before* buffering (chunked read cap — no memory DoS).
+- **Uploads**: type + size enforced *before* buffering (chunked read cap — no memory DoS);
+  storage path traversal protection on all file operations.
+- **Security headers**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  and `Referrer-Policy: strict-origin-when-cross-origin` middleware active.
 - **CORS**: explicit origin allow-list via `ALLOWED_ORIGINS` env — no wildcard on health data.
 - **Secrets**: startup warns loudly if `SECRET_KEY` is left as the dev default.
 - **Privacy rights** (works for every feature): itemised notice, consent gate at registration,
   one-click export, complete self-service erasure including uploaded files and crowdsourced
   wait-time reports.
+- **Audit trail**: security events (register, login failure, export, erasure, share link creation
+  and revocation) logged under GDPR Art. 30/32 accountability principles with zero personal data.
 - **Per-country law notes**: Privacy page renders the matching regime summary for 15+
   jurisdictions (DPDP, GDPR, UK GDPR, US state laws incl. WA My Health My Data, LGPD,
   PIPEDA, APPs, PDPA, APPI, PIPA, KVKK, POPIA, PIPL…).
 
 Honest limits (fix before scale): in-memory rate limiting is per-process (add Redis with
 multiple workers); tokens stay valid until expiry (72 h) with no server-side revocation list;
-free-tier file storage is ephemeral; legal pages are templates needing lawyer sign-off;
-no audit logging yet.
+free-tier file storage is ephemeral; legal pages are templates needing qualified lawyer sign-off.
 
 ---
 
