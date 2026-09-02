@@ -112,8 +112,11 @@ def _live_ctg_search(cancer_type: str | None, biomarkers: list[str] | None,
         local = [l for l in locations if ctry and l["country"] == ctry]
 
         nct = ident.get("nctId", "")
-        label = _phase_label(design.get("phases"))
-        enrollment = ((design.get("enrollmentInfo") or {}).get("count")) or 0
+        raw_count = (design.get("enrollmentInfo") or {}).get("count")
+        try:
+            enrollment = int(raw_count) if raw_count is not None else 0
+        except (ValueError, TypeError):
+            enrollment = 0
         prio = _priority(_phase_weight(label), enrollment, len(local))
 
         summary = ((p.get("descriptionModule", {}) or {}).get("briefSummary") or "").strip()

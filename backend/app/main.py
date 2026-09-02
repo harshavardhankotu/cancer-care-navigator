@@ -63,6 +63,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
 for router in (auth_routes.router, cases.router, documents.router,
                opinions.router, opinions.public_router, directory.router,
                trials.router, finance.router, me.router, plan.router):
@@ -135,6 +144,9 @@ if os.path.isdir(FRONTEND_DIST):
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa_fallback(full_path: str):
+        if full_path.startswith("api/") or full_path == "api":
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="API endpoint not found")
         candidate = os.path.normpath(os.path.join(FRONTEND_DIST, full_path))
         if full_path and candidate.startswith(FRONTEND_DIST) and os.path.isfile(candidate):
             return FileResponse(candidate)

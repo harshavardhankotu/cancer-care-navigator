@@ -157,7 +157,10 @@ def add_wait_report(body: WaitReportIn, db: Session = Depends(get_db),
                     family: Family = Depends(get_current_family)):
     if body.reported_wait_days < 0:
         raise HTTPException(status_code=400, detail="Wait days must be >= 0")
-    report = WaitTimeReport(center_name=body.center_name.strip(),
+    cname = body.center_name.strip()
+    if not cname:
+        raise HTTPException(status_code=400, detail="Center name cannot be blank")
+    report = WaitTimeReport(center_name=cname,
                             reported_wait_days=body.reported_wait_days,
                             reported_by_family_id=family.id)
     db.add(report)

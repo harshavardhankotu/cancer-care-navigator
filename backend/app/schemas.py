@@ -17,9 +17,9 @@ class TokenOut(BaseModel):
 
 
 class CaseCreate(BaseModel):
-    patient_name: str
-    cancer_type: str
-    patient_age: int | None = None
+    patient_name: str = Field(min_length=1)
+    cancer_type: str = Field(min_length=1)
+    patient_age: int | None = Field(default=None, ge=0, le=130)
     patient_sex: Literal["female", "male", "other", "unknown"] | None = None
     stage: str | None = None
     diagnosis_date: date | None = None
@@ -28,9 +28,9 @@ class CaseCreate(BaseModel):
 
 
 class CaseUpdate(BaseModel):
-    patient_name: str | None = None
-    cancer_type: str | None = None
-    patient_age: int | None = None
+    patient_name: str | None = Field(default=None, min_length=1)
+    cancer_type: str | None = Field(default=None, min_length=1)
+    patient_age: int | None = Field(default=None, ge=0, le=130)
     patient_sex: Literal["female", "male", "other", "unknown"] | None = None
     stage: str | None = None
     diagnosis_date: date | None = None
@@ -155,7 +155,7 @@ class CenterOut(BaseModel):
 
 
 class WaitReportIn(BaseModel):
-    center_name: str
+    center_name: str = Field(min_length=1, max_length=255)
     reported_wait_days: int = Field(ge=0, le=400)
 
 

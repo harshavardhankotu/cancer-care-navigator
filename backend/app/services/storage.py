@@ -32,10 +32,20 @@ def save_file(family_id: int, case_id: int, filename: str, content: bytes) -> st
 
 
 def delete_file(rel_path: str) -> None:
-    abs_path = os.path.join(STORAGE_DIR, rel_path)
+    try:
+        abs_path = absolute_path(rel_path)
+    except ValueError:
+        return
     if os.path.isfile(abs_path):
-        os.remove(abs_path)
+        try:
+            os.remove(abs_path)
+        except OSError:
+            pass
 
 
 def absolute_path(rel_path: str) -> str:
-    return os.path.join(STORAGE_DIR, rel_path)
+    base = os.path.abspath(STORAGE_DIR)
+    target = os.path.abspath(os.path.join(base, rel_path))
+    if not target.startswith(base):
+        raise ValueError("Invalid storage path traversal attempt")
+    return target

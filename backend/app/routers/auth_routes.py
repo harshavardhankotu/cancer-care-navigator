@@ -52,7 +52,7 @@ def register(body: FamilyCreate, request: Request, db: Session = Depends(get_db)
     db.commit()
     db.refresh(family)
     from ..audit import audit
-    audit(family.id, "register")
+    audit(family.id, "register", db=db)
     return TokenOut(token=create_token(family.id), email=family.email)
 
 
@@ -66,7 +66,7 @@ def login(body: FamilyCreate, request: Request, db: Session = Depends(get_db)):
     family = db.query(Family).filter(Family.email == email).first()
     if not family or not verify_password(body.password, family.password_hash):
         from ..audit import audit
-        audit(None, "login_fail")
+        audit(None, "login_fail", db=db)
         raise HTTPException(status_code=401, detail="Invalid email or password")
     return TokenOut(token=create_token(family.id), email=family.email)
 

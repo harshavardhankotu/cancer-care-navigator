@@ -61,7 +61,7 @@ def _case_dict(db: Session, case: Case) -> dict:
 def export_my_data(db: Session = Depends(get_db), family=Depends(get_current_family)):
     cases = db.query(Case).filter(Case.family_id == family.id).all()
     from ..audit import audit
-    audit(family.id, "export")
+    audit(family.id, "export", db=db)
     return {
         "account": {"email": family.email, "created_at": family.created_at.isoformat(),
                     "consent_accepted": family.consent_accepted,

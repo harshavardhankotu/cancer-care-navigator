@@ -90,7 +90,7 @@ def public_coverage_check(body: CoverageCheckIn, db: Session = Depends(get_db)):
         ctry = body.country.upper()
         schemes = [s for s in schemes if (s.country or "").upper() == ctry]
     results = [evaluate_scheme(s, profile) for s in schemes]
-    results.sort(key=lambda r: {"eligible": 0, "needs_verification": 1, "not_eligible": 2}[r["status"]])
+    results.sort(key=lambda r: {"eligible": 0, "needs_verification": 1, "not_eligible": 2}.get(r.get("status"), 3))
     return {
         "country": (body.country or "").upper() or None,
         "results": results,

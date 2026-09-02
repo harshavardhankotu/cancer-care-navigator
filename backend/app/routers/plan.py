@@ -65,7 +65,7 @@ def personal_plan(case_id: int, extended: bool = False,
     schemes.sort(key=lambda s: 0 if s.category != "general" else 1)
     scheme_results = sorted(
         (evaluate_scheme(s, profile) for s in schemes),
-        key=lambda r: {"eligible": 0, "needs_verification": 1, "not_eligible": 2}[r["status"]],
+        key=lambda r: {"eligible": 0, "needs_verification": 1, "not_eligible": 2}.get(r.get("status"), 3),
     )
 
     # Audience framing: broke vs budgeted get different emphasis (same facts).

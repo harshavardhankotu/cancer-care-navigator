@@ -74,3 +74,34 @@ def test_case_deletion_scoped(client, tokens):
     assert client.delete(f"/api/cases/{cid}", headers=_auth(ta)).status_code == 200
     # Confirm 404 after deletion
     assert client.get(f"/api/cases/{cid}", headers=_auth(ta)).status_code == 404
+
+
+def test_case_input_validation(client, tokens):
+    ta, _ = tokens
+    # Empty patient name rejected
+    assert client.post("/api/cases", headers=_auth(ta),
+                       json={"patient_name": "", "cancer_type": "lung"}).status_code == 422
+    # Negative age rejected
+    assert client.post("/api/cases", headers=_auth(ta),
+                       json={"patient_name": "Test", "cancer_type": "lung", "patient_age": -1}).status_code == 422
+
+
+def test_security_headers_and_api_404(client):
+    res = client.get("/api/health")
+    assert res.status_code == 200
+    assert res.headers.get("x-content-type-options") == "nosniff"
+    assert res.headers.get("x-frame-options") == "DENY"
+    assert res.headers.get("referrer-policy") == "strict-origin-when-cross-origin"
+
+    # API 404 returns JSON, not HTML
+    unknown = client.get("/api/nonexistent-route-xyz")
+    assert unknown.status_code == 404
+    assert "application/json" in unknown.headers.get("content-type", "")
+
+
+def test_storage_path_traversal_protection():
+    from app.services.storage import absolute_path
+    with pytest.raises(ValueError, match="traversal"):
+        absolute_path("../../etc/passwd")
+    with pytest.raises(ValueError, match="traversal"):
+        absolute_path("..\\..\\windows\\system32")
