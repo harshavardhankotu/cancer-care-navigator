@@ -14,6 +14,8 @@ Everything is information-brokering over citable public data — no medical advi
 no automated decisions.
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -221,7 +223,7 @@ def personal_plan(case_id: int, extended: bool = False,
     if uploaded_transfers_count > 0:
         completed.append({"category": "transfers", "title": f"{uploaded_transfers_count} hospital records transfer(s) uploaded"})
 
-    # 5D. Second-Opinion Readiness Model (transparent status and checklist)
+    # 5D. 7-State Second-Opinion Readiness Lifecycle Model
     if received_opinions_count > 0:
         opinion_readiness_status = "opinions_received"
     elif any(r.status in ("sent", "acknowledged") for r in opinion_requests):
@@ -237,58 +239,127 @@ def personal_plan(case_id: int, extended: bool = False,
     else:
         opinion_readiness_status = "not_started"
 
-    # 5E. Truly State-Aware Next Steps (Deterministic, max 3–5 items)
-    dynamic_next_steps = []
+    # 5E. Truly State-Aware Next Steps (Deterministic priority order, max 4 items)
     action_steps = []
 
     def _add_step(title, explanation, tab, reason=""):
-        dynamic_next_steps.append(f"{title}: {explanation}")
-        action_steps.append({
-            "title": title,
-            "explanation": explanation,
-            "tab": tab,
-            "reason": reason,
-        })
+        # Prevent duplicate steps
+        if not any(s["title"] == title for s in action_steps):
+            action_steps.append({
+                "title": title,
+                "explanation": explanation,
+                "tab": tab,
+                "reason": reason,
+            })
 
-    # Rule 1: No records -> upload initial record
-    if len(docs) == 0:
-        _add_step("Upload initial record", "Upload or add your first pathology, imaging, or laboratory record to build your case timeline", "records", "A clinical timeline starts with your diagnostic records")
-    # Rule 2: Pathology missing -> locate pathology
-    elif not has_pathology:
-        _add_step("Add pathology record", "Locate and upload your biopsy or histopathology report", "records", "Pathology records are commonly needed for specialist reviews")
-
-    # Rule 3: Clinical sequencing flags open -> discuss with team
+    # Priority 1: Unresolved clinical sequencing questions
     if flags:
-        _add_step("Review sequencing questions", "Discuss the flagged sequencing question(s) with your treating oncology team before making treatment decisions", "flags", "Certain treatments may foreclosed options if sequencing is not verified")
+        _add_step(
+            "Review sequencing questions",
+            "Discuss the flagged sequencing question(s) with your treating oncology team before making treatment decisions.",
+            "flags",
+            "Some treatment pathways can depend on diagnostic information being available first.",
+        )
 
-    # Rule 4: Records exist but package absent -> create package
-    if len(docs) > 0 and len(packages) == 0:
-        _add_step("Create case package", "Compile an immutable case package snapshot in Second Opinions to prepare for consultations", "opinions", "Having a single shareable package simplifies doctor consultations")
+    # Priority 2: Missing or unconfirmed core records
+    if len(docs) == 0:
+        _add_step(
+            "Add initial diagnostic record",
+            "Upload or add your first pathology, imaging, or laboratory report to establish your case timeline.",
+            "records",
+            "A clinical timeline starts with your diagnostic records.",
+        )
+    elif not has_pathology:
+        _add_step(
+            "Add pathology report",
+            "Locate and upload your biopsy or histopathology report to document tissue confirmation.",
+            "records",
+            "Pathology and biomarker records are commonly requested when specialists review a case.",
+        )
 
-    # Rule 5: Drafted opinions exist -> send to specialists
-    if any(r.status == "drafted" for r in opinion_requests):
-        _add_step("Send drafted requests", "Send your prepared case package link to consulting specialists and mark them sent", "opinions", "Parallel review reduces sequential delays")
+    if has_unconfirmed_dates:
+        _add_step(
+            "Verify timeline report dates",
+            "Check original report dates for records marked unconfirmed so your clinical timeline is chronologically accurate.",
+            "records",
+            "Accurate report dates prevent confusion regarding disease progression and treatment intervals.",
+        )
 
-    # Rule 6: Opinions sent -> monitor SLA
-    if any(r.status in ("sent", "acknowledged") for r in opinion_requests):
-        _add_step("Monitor opinion replies", "Check response progress against target SLA deadlines", "opinions", "Follow up if specialist response is delayed")
+    # Priority 3: Overdue specialist responses or conflicting opinions
+    has_overdue_opinion = any(
+        bool(r.sla_deadline and r.sla_deadline < datetime.utcnow())
+        for r in opinion_requests
+        if r.status in ("sent", "acknowledged")
+    )
+    if has_overdue_opinion:
+        _add_step(
+            "Follow up on specialist opinion",
+            "One or more second-opinion requests have passed their target response window; consider contacting the clinic coordinator.",
+            "opinions",
+            "Tracking target turnaround times helps prevent open-ended consultation delays.",
+        )
 
-    # Rule 7: Conflicting opinions -> discuss with care team
     if conflict_detected:
-        _add_step("Review opinion differences", "Bring differing specialist recommendations to your primary care team or tumor board to discuss", "opinions", "Comparing modalities helps you ask focused questions")
+        _add_step(
+            "Review opinion differences",
+            "Specialist opinions suggest differing recommendations; discuss the differences with your treating clinical team or multidisciplinary tumor board.",
+            "opinions",
+            "Comparing treatment modalities helps you ask focused questions about sequencing and options.",
+        )
 
-    # Rule 8: Transfer in progress -> packing checklist
+    # Priority 4: Active hospital transfer coordination
     if any(t.status != "uploaded" for t in transfers):
-        _add_step("Prepare transfer records", "Review the physical transfer checklist in Logistics to confirm materials requested by the receiving centre", "logistics", "Receiving centres often require original slides and DICOM media")
+        _add_step(
+            "Prepare transfer records",
+            "Confirm physical materials (e.g. slides, imaging media) requested by the receiving hospital before travel.",
+            "logistics",
+            "Receiving centres commonly require primary diagnostic materials before outpatient evaluation.",
+        )
 
-    # Rule 9: Financial verification if eligible schemes exist
+    # Priority 5: Second-opinion preparation or dispatch
+    if opinion_readiness_status == "ready_to_send":
+        _add_step(
+            "Send drafted requests",
+            "Send your prepared case package link to consulting specialists and mark the requests as sent.",
+            "opinions",
+            "Parallel review allows consulting specialists to evaluate your case concurrently.",
+        )
+    elif opinion_readiness_status == "package_ready":
+        _add_step(
+            "Select specialists for second opinion",
+            "Your case snapshot is compiled; select 1–2 consulting specialists in Second Opinions to prepare requests.",
+            "opinions",
+            "Preparing consultation requests in advance streamlines specialist outreach.",
+        )
+    elif len(docs) > 0 and len(packages) == 0:
+        _add_step(
+            "Create case package snapshot",
+            "Compile an immutable case package snapshot in Second Opinions to prepare for consultations.",
+            "opinions",
+            "Having a single shareable snapshot simplifies specialist reviews without requiring an account.",
+        )
+
+    # Priority 6: Financial scheme verification
     eligible_schemes = [s for s in scheme_results if s["status"] in ("eligible", "needs_verification")]
     if eligible_schemes and prof_row:
-        _add_step("Verify coverage schemes", "Check official verification pathways and required documents on government portals linked below", "finance", "Scheme criteria change; official portals confirm final eligibility")
+        _add_step(
+            "Verify coverage schemes",
+            "Check official verification pathways and required documents on government portals linked below.",
+            "finance",
+            "Scheme criteria change periodically; official portals provide definitive empanelment and claim rules.",
+        )
 
-    # Rule 10: Fallback exploration step if early in journey
-    if len(dynamic_next_steps) < 3:
-        _add_step("Explore accredited centres", "Review objective public facts for specialized cancer centres in your region", "centers", "Public accreditation and service capabilities help identify care options")
+    # Priority 7: Context-dependent fallback (only if no urgent or in-progress action items exist)
+    if len(action_steps) == 0:
+        _add_step(
+            "Review care options",
+            "Review objective public information about accredited centres, coverage pathways, and navigation options when you are ready.",
+            "centers",
+            "Objective public information can help you prepare questions for your treating clinical team.",
+        )
+
+    selected_actions = action_steps[:4]
+    dynamic_next_steps = [f"{a['title']}: {a['explanation']}" for a in selected_actions]
 
     plan = {
         "country": country,
@@ -323,21 +394,52 @@ def personal_plan(case_id: int, extended: bool = False,
         },
         "second_opinion_readiness": {
             "status": opinion_readiness_status,
-            "ready": len(packages) > 0 and has_pathology,
+            "lifecycle": "7-state second-opinion readiness lifecycle",
+            "ready": opinion_readiness_status in ("package_ready", "ready_to_send"),
+            "ready_description": (
+                "Snapshot package compiled and ready for specialist outreach."
+                if opinion_readiness_status in ("package_ready", "ready_to_send")
+                else "Case is not currently in the pre-dispatch preparation stage."
+            ),
             "has_records": len(docs) > 0,
             "has_pathology": has_pathology,
             "has_package": len(packages) > 0,
             "open_flags_count": len(flags),
             "checklist": [
-                {"item": "Pathology / biopsy report", "present": has_pathology},
-                {"item": "Imaging scans (CT/PET/MRI)", "present": has_imaging},
-                {"item": "Laboratory / blood reports", "present": has_labs},
-                {"item": "Immutable case snapshot package", "present": len(packages) > 0},
-                {"item": "Specialist consultation questions", "present": len(questions) > 0},
+                {
+                    "category": "Pathology / biopsy report",
+                    "item": "Pathology / biopsy report",
+                    "present": has_pathology,
+                    "status": "present" if has_pathology else "not_identified",
+                },
+                {
+                    "category": "Imaging scans (CT/PET/MRI)",
+                    "item": "Imaging scans (CT/PET/MRI)",
+                    "present": has_imaging,
+                    "status": "present" if has_imaging else "not_identified",
+                },
+                {
+                    "category": "Laboratory / blood reports",
+                    "item": "Laboratory / blood reports",
+                    "present": has_labs,
+                    "status": "present" if has_labs else "not_identified",
+                },
+                {
+                    "category": "Immutable case snapshot package",
+                    "item": "Immutable case snapshot package",
+                    "present": len(packages) > 0,
+                    "status": "compiled" if len(packages) > 0 else "not_created",
+                },
+                {
+                    "category": "Specialist consultation questions",
+                    "item": "Specialist consultation questions",
+                    "present": len(questions) > 0,
+                    "status": "reviewed" if len(questions) > 0 else "none_queued",
+                },
             ],
         },
-        "next_steps": dynamic_next_steps[:4],
-        "action_steps": action_steps[:4],
+        "next_steps": dynamic_next_steps,
+        "action_steps": selected_actions,
         "disclaimer": ("This plan organises public information around YOUR case. It is not "
                        "medical advice; decisions rest with you and your treating doctors."),
     }

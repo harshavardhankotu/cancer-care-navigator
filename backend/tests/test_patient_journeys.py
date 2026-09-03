@@ -8,12 +8,17 @@ Covers end-to-end patient/caregiver journeys without any real patient data:
 - Journey 5: Low-income financial access & scheme matching (PM-JAY, CGHS, non-guaranteed wording)
 - Journey 6: Caregiver case access & cross-family authorization isolation
 - Journey 7: Date safety (missing, valid, invalid, and timeline ordering)
+- Journey 8: Stale/unverified data transparency (unconfirmed dates, placeholder doctors, trial provenance)
+- Journey 9: Second opinion SLA deadlines (future vs overdue in plan)
 """
 
+from datetime import datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from app.database import SessionLocal
 from app.main import app
+from app.models import OpinionRequest
 
 
 @pytest.fixture(scope="module")
@@ -226,8 +231,8 @@ def test_journey_financial_access_and_scheme_matching(client, auth_headers):
     assert "not medical advice" in match_res["disclaimer"].lower() or "decisions rest with you" in match_res["disclaimer"].lower()
 
 
-def test_journey_caregiver_access_and_cross_family_isolation(client, auth_headers, secondary_auth_headers):
-    """Journey 6: Authorized caregiver accesses case profile; unauthorized family is blocked."""
+def test_journey_family_authorized_access_and_cross_family_isolation(client, auth_headers, secondary_auth_headers):
+    """Journey 6: Family-authorized access to case profile; unauthorized family is blocked (cross-family isolation)."""
     # 1. Family A creates case
     case_res = client.post("/api/cases", headers=auth_headers, json={
         "patient_name": "Synthetic Patient F",
@@ -294,3 +299,99 @@ def test_journey_date_safety_and_timeline_ordering(client, auth_headers):
     # Ensure unconfirmed dates are exposed in response
     unconfirmed_count = sum(1 for d in docs if not d["extracted_date"] or (d.get("raw_extraction_json") or {}).get("date_unconfirmed"))
     assert unconfirmed_count == 2
+
+
+def test_journey_stale_and_unverified_data_handling(client, auth_headers):
+    """Journey 8: Stale/unverified external information is explicitly marked and never presented as confirmed fact."""
+    case_res = client.post("/api/cases", headers=auth_headers, json={
+        "patient_name": "Synthetic Patient H",
+        "cancer_type": "Ovarian Cancer",
+        "country": "IN",
+    })
+    cid = case_res.json()["id"]
+
+    # 1. Unconfirmed report date is flagged in personal plan
+    client.post(f"/api/cases/{cid}/records", headers=auth_headers, json={
+        "extracted_date": None,
+        "extracted_source": "External Clinic",
+        "extracted_doc_type": "Histopathology report",
+        "key_findings": ["High grade serous carcinoma"],
+    })
+
+    plan = client.get(f"/api/cases/{cid}/personal-plan", headers=auth_headers).json()
+    assert plan["record_readiness"]["has_unconfirmed_dates"] is True
+    assert any("unconfirmed" in item["title"].lower() for item in plan["needs_attention"])
+
+    # 2. Seeded directory doctors indicate placeholder status or verification notice
+    docs_dir = client.get("/api/doctors", headers=auth_headers).json()
+    assert len(docs_dir) > 0
+    # Every doctor carries transparent metadata
+    for doc in docs_dir:
+        assert "is_placeholder" in doc or "hospital" in doc
+
+    # 3. Trials indicate provenance (live vs example data)
+    trials_res = client.get("/api/trials/search?condition=ovarian&country=IN", headers=auth_headers).json()
+    assert "results" in trials_res
+    assert "disclaimer" in trials_res or "source_note" in trials_res
+    for trial in trials_res.get("results", []):
+        assert "live" in trial
+
+    # 4. Public schemes quick-check carries persistent disclaimer against guaranteed eligibility
+    quick_res = client.post("/api/coverage-check", json={
+        "income_bracket": "low",
+        "insurance_status": "uninsured",
+        "country": "IN",
+    }).json()
+    assert "disclaimer" in quick_res
+    assert "never by this tool" in quick_res["disclaimer"].lower() or "not medical advice" in quick_res["disclaimer"].lower()
+
+
+def test_journey_opinion_sla_future_and_past_deadlines_in_plan(client, auth_headers):
+    """Journey 9: Second opinion SLA deadlines (future vs overdue) handle datetime comparisons safely."""
+    case_res = client.post("/api/cases", headers=auth_headers, json={
+        "patient_name": "Synthetic Patient I",
+        "cancer_type": "Pancreatic Cancer",
+        "country": "IN",
+    })
+    cid = case_res.json()["id"]
+
+    # Add pathology record and compile package
+    client.post(f"/api/cases/{cid}/records", headers=auth_headers, json={
+        "extracted_date": "2026-08-01",
+        "extracted_source": "Surgical Lab",
+        "extracted_doc_type": "Biopsy report",
+        "key_findings": ["Pancreatic adenocarcinoma"],
+    })
+    client.post(f"/api/cases/{cid}/packages", headers=auth_headers)
+
+    # Draft and mark opinion request as sent
+    res = client.post(f"/api/cases/{cid}/opinions", headers=auth_headers, json={"doctor_ids": [1]}).json()
+    oid = res["requests"][0]["id"]
+    client.patch(f"/api/opinions/{oid}", headers=auth_headers, json={"action": "mark_sent"})
+
+    # Check plan with FUTURE deadline (default)
+    plan_future = client.get(f"/api/cases/{cid}/personal-plan", headers=auth_headers).json()
+    assert plan_future["second_opinion_readiness"]["status"] == "requests_sent"
+    in_prog = next((item for item in plan_future["in_progress"] if item["category"] == "second_opinion"), None)
+    assert in_prog is not None
+    assert in_prog["is_overdue"] is False
+
+    # Backdate SLA deadline to PAST (simulating SLA breach)
+    db = SessionLocal()
+    db.query(OpinionRequest).filter(OpinionRequest.id == oid).update(
+        {"sla_deadline": datetime.utcnow() - timedelta(days=3)}
+    )
+    db.commit()
+    db.close()
+
+    # Check plan with PAST deadline
+    plan_past = client.get(f"/api/cases/{cid}/personal-plan", headers=auth_headers).json()
+    in_prog_overdue = next((item for item in plan_past["in_progress"] if item["category"] == "second_opinion"), None)
+    assert in_prog_overdue is not None
+    assert in_prog_overdue["is_overdue"] is True
+    assert "SLA OVERDUE" in in_prog_overdue["detail"]
+
+    # Overdue action surfaced deterministically in action steps
+    follow_up_step = next((s for s in plan_past["action_steps"] if "specialist opinion" in s["title"].lower()), None)
+    assert follow_up_step is not None
+    assert follow_up_step["tab"] == "opinions"

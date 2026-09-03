@@ -23,8 +23,8 @@ export default function PlanTab({ caseId }) {
     api(`/cases/${caseId}/personal-plan`).then(setPlan).catch((e) => setError(e.message))
   }, [caseId])
 
-  const toggleStep = (idx) => {
-    const updated = { ...checkedSteps, [idx]: !checkedSteps[idx] }
+  const toggleStep = (key) => {
+    const updated = { ...checkedSteps, [key]: !checkedSteps[key] }
     setCheckedSteps(updated)
     try {
       localStorage.setItem(`ccn_plan_steps_${caseId}`, JSON.stringify(updated))
@@ -72,7 +72,7 @@ export default function PlanTab({ caseId }) {
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500 italic">No urgent sequencing flags or missing baseline records identified right now.</p>
+            <p className="text-xs text-slate-500 italic">No sequencing flags or unconfirmed record alerts identified from the records currently in your case profile.</p>
           )}
         </div>
 
@@ -90,7 +90,7 @@ export default function PlanTab({ caseId }) {
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500 italic">No active specialist requests or hospital transfers in progress.</p>
+            <p className="text-xs text-slate-500 italic">No active specialist opinion requests or hospital transfers currently recorded.</p>
           )}
         </div>
       </div>
@@ -168,7 +168,11 @@ export default function PlanTab({ caseId }) {
           Rules-based match vs your financial profile — always confirm with the scheme itself.
           💎 marks programmes most patients have never heard of.
         </p>
-        {eligible.length === 0 && <p className="text-sm text-slate-500">No schemes found for {plan.country}. Add your financial details in the Finance tab.</p>}
+        {eligible.length === 0 && (
+          <p className="text-sm text-slate-500">
+            No schemes currently matched from the information entered. You can check the full Schemes directory or verify at a hospital Ayushman/help desk.
+          </p>
+        )}
         {eligible.map((s) => (
           <details key={s.scheme_id} className={`border rounded p-2 mb-2 text-sm border-l-4 ${STATUS_STYLE[s.status]}`}>
             <summary className="cursor-pointer font-medium">
@@ -214,7 +218,11 @@ export default function PlanTab({ caseId }) {
 
       <section className="card mb-4">
         <h2 className="font-semibold mb-1">🧪 Recruiting trials (sites in {plan.country} first)</h2>
-        {plan.trials.length === 0 && <p className="text-sm text-slate-500">No trials loaded — try the Trials tab.</p>}
+        {plan.trials.length === 0 && (
+          <p className="text-sm text-slate-500">
+            No matching recruiting clinical trials returned from the available public registry for this search. This does not mean no trials exist; discuss possible trial options with your treating oncologist.
+          </p>
+        )}
         <ul className="text-sm space-y-2">
           {plan.trials.map((t) => (
             <li key={t.external_id || t.title}>
@@ -229,7 +237,11 @@ export default function PlanTab({ caseId }) {
 
       <section className="card mb-4">
         <h2 className="font-semibold mb-1">❓ Questions to raise with your treating oncologist</h2>
-        {plan.questions_to_ask.length === 0 && <p className="text-sm text-slate-500">No open decision flags — nothing queued right now.</p>}
+        {plan.questions_to_ask.length === 0 && (
+          <p className="text-sm text-slate-500">
+            No guideline questions currently flagged from your uploaded records. Always discuss your personal questions with your treating team.
+          </p>
+        )}
         <ol className="list-decimal ml-5 text-sm space-y-2">
           {plan.questions_to_ask.map((q, i) => (
             <li key={i}>
@@ -251,13 +263,15 @@ export default function PlanTab({ caseId }) {
             const text = isObj ? step.explanation : (step.includes(':') ? step.slice(step.indexOf(':') + 1).trim() : step)
             const reason = isObj ? step.reason : ''
             const tab = isObj ? step.tab : ''
+            const stepKey = isObj ? `${step.tab}:${step.title}` : `step:${title}`
+            const isChecked = !!checkedSteps[stepKey]
             return (
-              <label key={i} className={`flex items-start gap-2.5 p-2.5 rounded border cursor-pointer transition-colors ${checkedSteps[i] ? 'bg-green-50 border-green-200 line-through text-slate-400' : 'border-slate-200 hover:bg-slate-50'}`}>
+              <label key={stepKey} className={`flex items-start gap-2.5 p-2.5 rounded border cursor-pointer transition-colors ${isChecked ? 'bg-green-50 border-green-200 line-through text-slate-400' : 'border-slate-200 hover:bg-slate-50'}`}>
                 <input
                   type="checkbox"
                   className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
-                  checked={!!checkedSteps[i]}
-                  onChange={() => toggleStep(i)}
+                  checked={isChecked}
+                  onChange={() => toggleStep(stepKey)}
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
